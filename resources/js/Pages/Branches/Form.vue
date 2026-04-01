@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import AppLayout from '@/Layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
@@ -43,9 +44,19 @@ const form = useForm({
   schedule: props.branch?.schedule || { ...defaultSchedule },
   sri_establishment: props.branch?.sri_establishment || '001',
   sri_emission_point: props.branch?.sri_emission_point || '001',
+  sri_ambiente: props.branch?.sri_ambiente || 'test',
+  sri_regimen: props.branch?.sri_regimen || 'general',
+  sri_obligado_contabilidad: props.branch?.sri_obligado_contabilidad || 'NO',
   is_active: props.branch?.is_active ?? true,
   stylist_ids: props.branch?.stylists?.map(s => s.id) || [],
 })
+
+// Certificate form (separate, only for editing)
+const certForm = useForm({ certificate: null, certificate_password: '' })
+const submitCert = () => {
+  if (!props.branch) return
+  certForm.post(`/salon/${page.props.tenant?.id}/sucursales/${props.branch.id}/certificate`, { forceFormData: true })
+}
 
 const submit = () => {
   if (isEditing.value) {
@@ -96,10 +107,61 @@ const toggleStylist = (id) => {
               <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
             </select>
           </div>
+        </CardContent>
+      </Card>
+
+      <!-- Configuracion SRI -->
+      <Card>
+        <CardHeader><CardTitle class="text-base">Configuracion SRI</CardTitle></CardHeader>
+        <CardContent class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2"><Label>Establecimiento SRI</Label><Input v-model="form.sri_establishment" maxlength="3" /></div>
-            <div class="space-y-2"><Label>Punto de emision SRI</Label><Input v-model="form.sri_emission_point" maxlength="3" /></div>
+            <div class="space-y-2"><Label>Establecimiento</Label><Input v-model="form.sri_establishment" maxlength="3" /></div>
+            <div class="space-y-2"><Label>Punto de emision</Label><Input v-model="form.sri_emission_point" maxlength="3" /></div>
           </div>
+          <div class="space-y-2">
+            <Label>Ambiente</Label>
+            <select v-model="form.sri_ambiente" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+              <option value="test">Pruebas</option>
+              <option value="production">Produccion</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <Label>Regimen tributario</Label>
+            <select v-model="form.sri_regimen" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+              <option value="general">Regimen General</option>
+              <option value="rimpe_emprendedor">RIMPE Emprendedor</option>
+              <option value="rimpe_negocio_popular">RIMPE Negocio Popular</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <Label>Obligado a llevar contabilidad</Label>
+            <select v-model="form.sri_obligado_contabilidad" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+              <option value="NO">NO</option>
+              <option value="SI">SI</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Certificado digital (solo al editar) -->
+      <Card v-if="isEditing">
+        <CardHeader><CardTitle class="text-base">Certificado digital (.p12)</CardTitle></CardHeader>
+        <CardContent>
+          <div v-if="branch?.sri_certificate_uploaded" class="flex items-center gap-2 mb-4">
+            <Badge class="bg-green-100 text-green-700">Certificado cargado</Badge>
+          </div>
+          <form @submit.prevent="submitCert" class="space-y-4">
+            <div class="space-y-2">
+              <Label>Archivo .p12</Label>
+              <Input type="file" accept=".p12,.pfx" @change="certForm.certificate = $event.target.files[0]" />
+              <p v-if="certForm.errors.certificate" class="text-sm text-red-500">{{ certForm.errors.certificate }}</p>
+            </div>
+            <div class="space-y-2">
+              <Label>Contrasena del certificado</Label>
+              <Input v-model="certForm.certificate_password" type="password" />
+            </div>
+            <Button type="submit" :disabled="certForm.processing" variant="outline">Subir certificado</Button>
+          </form>
         </CardContent>
       </Card>
 

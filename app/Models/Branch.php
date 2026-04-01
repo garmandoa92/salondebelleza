@@ -23,6 +23,10 @@ class Branch extends Model
         'settings',
         'sri_establishment',
         'sri_emission_point',
+        'sri_ambiente',
+        'sri_regimen',
+        'sri_obligado_contabilidad',
+        'sri_certificate_uploaded',
         'is_main',
         'is_active',
         'sort_order',
@@ -35,6 +39,7 @@ class Branch extends Model
             'settings' => 'array',
             'is_main' => 'boolean',
             'is_active' => 'boolean',
+            'sri_certificate_uploaded' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

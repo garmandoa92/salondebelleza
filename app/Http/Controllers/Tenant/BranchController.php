@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Stylist;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
 
 class BranchController extends Controller
@@ -62,6 +63,9 @@ class BranchController extends Controller
             'schedule' => ['nullable', 'array'],
             'sri_establishment' => ['nullable', 'string', 'size:3'],
             'sri_emission_point' => ['nullable', 'string', 'size:3'],
+            'sri_ambiente' => ['nullable', 'in:test,production'],
+            'sri_regimen' => ['nullable', 'in:general,rimpe_emprendedor,rimpe_negocio_popular'],
+            'sri_obligado_contabilidad' => ['nullable', 'in:SI,NO'],
             'stylist_ids' => ['nullable', 'array'],
             'stylist_ids.*' => ['uuid'],
         ]);
@@ -104,6 +108,9 @@ class BranchController extends Controller
             'schedule' => ['nullable', 'array'],
             'sri_establishment' => ['nullable', 'string', 'size:3'],
             'sri_emission_point' => ['nullable', 'string', 'size:3'],
+            'sri_ambiente' => ['nullable', 'in:test,production'],
+            'sri_regimen' => ['nullable', 'in:general,rimpe_emprendedor,rimpe_negocio_popular'],
+            'sri_obligado_contabilidad' => ['nullable', 'in:SI,NO'],
             'is_active' => ['boolean'],
             'stylist_ids' => ['nullable', 'array'],
         ]);
@@ -128,6 +135,33 @@ class BranchController extends Controller
         $branch->delete();
         return redirect()->route('tenant.branches.index', ['tenant' => tenant('id')])
             ->with('success', 'Sucursal eliminada.');
+    }
+
+    public function uploadCertificate(Request $request, Branch $branch)
+    {
+        $request->validate([
+            'certificate' => ['required', 'file', 'max:10240'],
+            'certificate_password' => ['required', 'string'],
+        ]);
+
+        $file = $request->file('certificate');
+        $content = file_get_contents($file->getRealPath());
+
+        $certs = [];
+        if (! openssl_pkcs12_read($content, $certs, $request->certificate_password)) {
+            return back()->withErrors(['certificate' => 'No se pudo leer el certificado. Verifique la contrasena.']);
+        }
+
+        $settings = $branch->settings ?? [];
+        $settings['sri_certificate'] = Crypt::encrypt(base64_encode($content));
+        $settings['sri_certificate_password'] = Crypt::encrypt($request->certificate_password);
+        $settings['sri_certificate_uploaded_at'] = now()->toIso8601String();
+        $branch->update([
+            'settings' => $settings,
+            'sri_certificate_uploaded' => true,
+        ]);
+
+        return back()->with('success', 'Certificado SRI subido para ' . $branch->name);
     }
 
     public function switchBranch(Request $request)

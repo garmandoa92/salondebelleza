@@ -77,8 +77,10 @@ const deleteBranch = (b) => {
             </div>
           </div>
 
-          <div class="text-xs text-gray-400">
-            SRI: {{ b.sri_establishment }}-{{ b.sri_emission_point }}
+          <div class="flex flex-wrap gap-1.5 text-xs text-gray-400">
+            <span>SRI: {{ b.sri_establishment }}-{{ b.sri_emission_point }}</span>
+            <span>· {{ b.sri_ambiente === 'production' ? 'Produccion' : 'Pruebas' }}</span>
+            <Badge v-if="b.sri_certificate_uploaded" class="bg-green-100 text-green-700 text-[10px] px-1.5 py-0">Cert</Badge>
           </div>
 
           <div class="flex gap-1 pt-2">

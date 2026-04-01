@@ -203,5 +203,6 @@ Route::prefix('/salon/{tenant}')->middleware([
                 'destroy' => 'tenant.branches.destroy',
             ]);
         Route::post('sucursales/switch', [BranchController::class, 'switchBranch'])->name('tenant.branches.switch');
+        Route::post('sucursales/{branch}/certificate', [BranchController::class, 'uploadCertificate'])->name('tenant.branches.certificate');
     });
 });
