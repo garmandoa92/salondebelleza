@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
+import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +44,34 @@ const navigation = computed(() => [
 const logout = () => {
   router.post(`${basePath.value}/logout`)
 }
+
+// Notifications
+const notifications = ref([])
+const unreadCount = ref(0)
+const showNotifications = ref(false)
+
+const loadNotifications = async () => {
+  try {
+    const { data } = await axios.get(`${basePath.value}/notifications/unread`)
+    notifications.value = data.notifications || []
+    unreadCount.value = data.unread_count || 0
+  } catch {}
+}
+
+const markRead = async (id) => {
+  await axios.post(`${basePath.value}/notifications/${id}/read`)
+  loadNotifications()
+}
+
+const markAllRead = async () => {
+  await axios.post(`${basePath.value}/notifications/read-all`)
+  loadNotifications()
+}
+
+onMounted(() => {
+  loadNotifications()
+  setInterval(loadNotifications, 60000) // Poll every minute
+})
 </script>
 
 <template>
@@ -149,12 +178,38 @@ const logout = () => {
 
           <div class="flex items-center gap-3">
             <!-- Notifications -->
-            <Button variant="ghost" size="icon" class="relative">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <Badge class="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">0</Badge>
-            </Button>
+            <div class="relative">
+              <Button variant="ghost" size="icon" @click="showNotifications = !showNotifications">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <Badge v-if="unreadCount > 0" class="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">{{ unreadCount }}</Badge>
+              </Button>
+
+              <!-- Notification dropdown -->
+              <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                  <span class="font-semibold text-sm">Notificaciones</span>
+                  <button v-if="unreadCount > 0" @click="markAllRead" class="text-xs text-primary hover:underline">Marcar todas leidas</button>
+                </div>
+                <div class="max-h-80 overflow-y-auto">
+                  <div v-if="notifications.length">
+                    <div
+                      v-for="n in notifications"
+                      :key="n.id"
+                      @click="markRead(n.id)"
+                      class="px-4 py-3 hover:bg-gray-50 border-b last:border-0 cursor-pointer"
+                      :class="{ 'bg-blue-50/50': !n.read_at }"
+                    >
+                      <p class="text-sm font-medium text-gray-900">{{ n.data?.title }}</p>
+                      <p class="text-xs text-gray-500 mt-0.5">{{ n.data?.message }}</p>
+                      <p class="text-[10px] text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('es-EC') }}</p>
+                    </div>
+                  </div>
+                  <div v-else class="px-4 py-6 text-center text-sm text-gray-400">Sin notificaciones</div>
+                </div>
+              </div>
+            </div>
 
             <!-- User menu -->
             <DropdownMenu>

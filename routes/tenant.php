@@ -18,6 +18,7 @@ use App\Http\Controllers\Tenant\SaleController;
 use App\Http\Controllers\Tenant\SriInvoiceController;
 use App\Http\Controllers\Tenant\ProductController;
 use App\Http\Controllers\Tenant\StockMovementController;
+use App\Http\Controllers\Tenant\NotificationController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -154,5 +155,11 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('stock/movements', [StockMovementController::class, 'index'])->name('tenant.stock.movements');
         Route::post('stock/purchase', [StockMovementController::class, 'purchase'])->name('tenant.stock.purchase');
         Route::post('stock/adjustment', [StockMovementController::class, 'adjustment'])->name('tenant.stock.adjustment');
+
+        // Notifications
+        Route::get('notifications', [NotificationController::class, 'index'])->name('tenant.notifications.index');
+        Route::get('notifications/unread', [NotificationController::class, 'unread'])->name('tenant.notifications.unread');
+        Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('tenant.notifications.read');
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('tenant.notifications.read-all');
     });
 });
