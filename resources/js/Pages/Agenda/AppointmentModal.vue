@@ -52,42 +52,85 @@ const createClient = async () => {
   newClient.value = { first_name: '', last_name: '', phone: '', email: '', source: 'walk_in' }
 }
 
-// Step 2 - Service
+// Step 2 - Service OR Package
+const step2Tab = ref('service')
 const selectedService = ref(null)
 
-// Package check
-const packageInfo = ref(null)
-const usePackage = ref(true)
-const checkingPackage = ref(false)
+// Package data
+const clientActivePackages = ref([])
+const availablePackages = ref([])
+const loadingPackages = ref(false)
+const selectedPackageItem = ref(null) // ClientPackageItem selected from active package
+const purchasePackageId = ref(null)   // Package to buy
 
-const checkPackage = async () => {
-  packageInfo.value = null
-  const clientId = selectedClient.value?.id
-  const serviceId = selectedService.value?.id
-  if (!clientId || !serviceId) return
-  checkingPackage.value = true
+// Mode tracking for Step 4 summary
+const appointmentMode = ref('service') // 'service' | 'package_use' | 'package_buy'
+
+// Load packages when client is selected and step 2 opens
+const loadPackages = async () => {
+  if (!selectedClient.value?.id) return
+  loadingPackages.value = true
   try {
-    const { data } = await axios.get(`${base}/packages/check-client`, {
-      params: { client_id: clientId, service_id: serviceId },
+    const { data } = await axios.get(`${base}/packages/for-appointment`, {
+      params: { client_id: selectedClient.value.id },
     })
-    if (data?.has_package) {
-      packageInfo.value = data
-      usePackage.value = true
-    }
-  } catch (e) {
-    // Silently fail - no package info shown
-  } finally {
-    checkingPackage.value = false
-  }
+    clientActivePackages.value = data.active || []
+    availablePackages.value = data.available || []
+  } catch { }
+  finally { loadingPackages.value = false }
 }
 
-// Check when service changes AND when moving to step 3 (as fallback)
-watch(selectedService, () => checkPackage())
-watch(step, (newStep) => {
-  if (newStep === 3 && !packageInfo.value && selectedClient.value?.id && selectedService.value?.id) {
-    checkPackage()
-  }
+watch(step, (s) => {
+  if (s === 2 && selectedClient.value?.id) loadPackages()
 })
+
+const hasPackageTab = computed(() =>
+  clientActivePackages.value.length > 0 || availablePackages.value.length > 0
+)
+
+// Select a service from an active package item
+const selectFromPackage = (pkg, item) => {
+  // Find the actual service from categories to get duration
+  let svc = null
+  for (const cat of props.categories) {
+    svc = cat.services?.find(s => s.id === item.service_id)
+    if (svc) break
+  }
+  if (!svc) {
+    // Fallback: create a minimal service object
+    svc = { id: item.service_id, name: item.service_name, base_price: 0, duration_minutes: 30 }
+  }
+  selectedService.value = svc
+  selectedPackageItem.value = { ...item, package_name: pkg.package_name, package_id: pkg.id, expires_at: pkg.expires_at }
+  purchasePackageId.value = null
+  appointmentMode.value = 'package_use'
+}
+
+// Select a package to buy (first session today)
+const selectBuyPackage = (pkg) => {
+  // Use the first service in the package items
+  const firstItem = pkg.items[0]
+  let svc = null
+  for (const cat of props.categories) {
+    svc = cat.services?.find(s => s.id === firstItem.service_id)
+    if (svc) break
+  }
+  if (!svc) {
+    svc = { id: firstItem.service_id, name: firstItem.service_name, base_price: Number(pkg.price), duration_minutes: 30 }
+  }
+  selectedService.value = { ...svc, base_price: Number(pkg.price) }
+  purchasePackageId.value = pkg.id
+  selectedPackageItem.value = null
+  appointmentMode.value = 'package_buy'
+}
+
+// Select a normal service
+const selectNormalService = (svc) => {
+  selectedService.value = svc
+  selectedPackageItem.value = null
+  purchasePackageId.value = null
+  appointmentMode.value = 'service'
+}
 
 // Step 3 - Schedule
 const selectedStylist = ref(props.prefill?.stylist_id || '')
@@ -129,6 +172,11 @@ const endTime = computed(() => {
 
 const canSubmit = computed(() => selectedClient.value && selectedService.value && selectedStylist.value && selectedTime.value)
 
+const summaryPrice = computed(() => {
+  if (appointmentMode.value === 'package_use') return '$0.00'
+  return `$${Number(selectedService.value?.base_price || 0).toFixed(2)}`
+})
+
 const submit = async () => {
   if (!canSubmit.value) return
   saving.value = true
@@ -141,8 +189,11 @@ const submit = async () => {
       notes: notes.value || null,
       source: 'manual',
     }
-    if (packageInfo.value && usePackage.value) {
-      payload.client_package_item_id = packageInfo.value.client_package_item_id
+    if (appointmentMode.value === 'package_use' && selectedPackageItem.value) {
+      payload.client_package_item_id = selectedPackageItem.value.id
+    }
+    if (appointmentMode.value === 'package_buy' && purchasePackageId.value) {
+      payload.purchase_package_id = purchasePackageId.value
     }
     await axios.post(`${base}/agenda/appointments`, payload)
     emit('created')
@@ -152,13 +203,17 @@ const submit = async () => {
 
 const resetForm = () => {
   step.value = 1
+  step2Tab.value = 'service'
   selectedClient.value = null
   selectedService.value = null
   selectedTime.value = ''
   notes.value = ''
   clientSearch.value = ''
-  packageInfo.value = null
-  usePackage.value = true
+  selectedPackageItem.value = null
+  purchasePackageId.value = null
+  appointmentMode.value = 'service'
+  clientActivePackages.value = []
+  availablePackages.value = []
 }
 
 const close = () => { resetForm(); emit('close') }
@@ -178,20 +233,6 @@ const close = () => { resetForm(); emit('close') }
         >{{ s.l }}</button>
       </div>
 
-      <!-- Package banner (visible in steps 2-4) -->
-      <div v-if="packageInfo && step >= 2" class="mx-5 mt-4 bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-        <div class="flex items-start justify-between">
-          <div>
-            <p class="font-medium text-green-800">Este cliente tiene {{ packageInfo.remaining }} sesiones disponibles</p>
-            <p class="text-green-600 text-xs">Paquete: {{ packageInfo.package_name }} · Vence: {{ packageInfo.expires_at }}</p>
-          </div>
-          <label class="flex items-center gap-2 cursor-pointer shrink-0">
-            <input type="checkbox" v-model="usePackage" class="rounded border-gray-300" />
-            <span class="text-xs text-green-700">Descontar del paquete</span>
-          </label>
-        </div>
-      </div>
-
       <div class="p-5">
         <!-- Step 1: Client -->
         <div v-show="step === 1" class="space-y-4">
@@ -199,12 +240,8 @@ const close = () => { resetForm(); emit('close') }
             <Label>Buscar cliente</Label>
             <Input v-model="clientSearch" placeholder="Nombre, telefono o cedula..." />
             <div v-if="clientResults.length" class="border rounded-md max-h-48 overflow-y-auto">
-              <button
-                v-for="c in clientResults"
-                :key="c.id"
-                @click="selectClient(c)"
-                class="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0 text-sm"
-              >
+              <button v-for="c in clientResults" :key="c.id" @click="selectClient(c)"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0 text-sm">
                 <span class="font-medium">{{ c.first_name }} {{ c.last_name }}</span>
                 <span class="text-gray-500 ml-2">{{ c.phone }}</span>
                 <span v-if="c.visit_count" class="text-xs text-gray-400 ml-2">{{ c.visit_count }} visitas</span>
@@ -215,15 +252,12 @@ const close = () => { resetForm(); emit('close') }
           <div v-if="selectedClient" class="bg-blue-50 rounded-lg p-3 text-sm">
             <p class="font-medium">{{ selectedClient.first_name }} {{ selectedClient.last_name }}</p>
             <p class="text-gray-600">{{ selectedClient.phone }}</p>
-            <div v-if="selectedClient.allergies" class="mt-2 bg-red-100 rounded p-2 text-red-700 text-xs">
-              ⚠ {{ selectedClient.allergies }}
-            </div>
+            <div v-if="selectedClient.allergies" class="mt-2 bg-red-100 rounded p-2 text-red-700 text-xs">{{ selectedClient.allergies }}</div>
           </div>
 
           <button @click="showNewClient = !showNewClient" class="text-sm text-primary hover:underline">
             {{ showNewClient ? 'Cancelar' : '+ Nuevo cliente' }}
           </button>
-
           <div v-if="showNewClient" class="space-y-3 border rounded-lg p-3">
             <div class="grid grid-cols-2 gap-2">
               <Input v-model="newClient.first_name" placeholder="Nombre" />
@@ -239,26 +273,99 @@ const close = () => { resetForm(); emit('close') }
           </div>
         </div>
 
-        <!-- Step 2: Service -->
+        <!-- Step 2: Service / Package tabs -->
         <div v-show="step === 2" class="space-y-4">
-          <Label>Seleccionar servicio</Label>
-          <div v-for="cat in categories" :key="cat.id" class="space-y-2">
-            <p class="text-xs font-medium text-gray-500 flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: cat.color }" />
-              {{ cat.name }}
-            </p>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="svc in cat.services"
-                :key="svc.id"
-                @click="selectedService = svc"
-                :class="['text-left border rounded-lg p-3 text-sm transition-colors',
-                  selectedService?.id === svc.id ? 'border-primary bg-primary/5' : 'hover:bg-gray-50']"
-              >
-                <p class="font-medium">{{ svc.name }}</p>
-                <p class="text-gray-500 text-xs">{{ svc.duration_minutes }}min — ${{ Number(svc.base_price).toFixed(2) }}</p>
-              </button>
+          <!-- Sub-tabs -->
+          <div class="flex border-b">
+            <button @click="step2Tab = 'service'"
+              :class="['flex-1 py-2 text-sm font-medium border-b-2 transition-colors',
+                step2Tab === 'service' ? 'border-primary text-primary' : 'border-transparent text-gray-400']"
+            >Servicio</button>
+            <button v-if="hasPackageTab || loadingPackages" @click="step2Tab = 'package'"
+              :class="['flex-1 py-2 text-sm font-medium border-b-2 transition-colors',
+                step2Tab === 'package' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400']"
+            >
+              Paquete
+              <Badge v-if="clientActivePackages.length" class="ml-1 bg-green-100 text-green-700 text-[10px] px-1.5 py-0">{{ clientActivePackages.length }}</Badge>
+            </button>
+          </div>
+
+          <!-- Tab: Service (unchanged) -->
+          <div v-if="step2Tab === 'service'">
+            <div v-for="cat in categories" :key="cat.id" class="space-y-2 mb-3">
+              <p class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: cat.color }" />
+                {{ cat.name }}
+              </p>
+              <div class="grid grid-cols-2 gap-2">
+                <button v-for="svc in cat.services" :key="svc.id" @click="selectNormalService(svc)"
+                  :class="['text-left border rounded-lg p-3 text-sm transition-colors',
+                    selectedService?.id === svc.id && appointmentMode === 'service' ? 'border-primary bg-primary/5' : 'hover:bg-gray-50']">
+                  <p class="font-medium">{{ svc.name }}</p>
+                  <p class="text-gray-500 text-xs">{{ svc.duration_minutes }}min — ${{ Number(svc.base_price).toFixed(2) }}</p>
+                </button>
+              </div>
             </div>
+          </div>
+
+          <!-- Tab: Package -->
+          <div v-if="step2Tab === 'package'" class="space-y-4">
+            <div v-if="loadingPackages" class="text-sm text-gray-400 text-center py-4">Cargando paquetes...</div>
+
+            <!-- Section A: Active packages -->
+            <div v-if="clientActivePackages.length">
+              <p class="text-xs font-medium text-gray-500 mb-2">Paquetes activos de {{ selectedClient?.first_name }}</p>
+              <div class="space-y-2">
+                <div v-for="pkg in clientActivePackages" :key="pkg.id" class="border rounded-lg p-3 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold">{{ pkg.package_name }}</h4>
+                    <span class="text-xs text-gray-400">Vence: {{ pkg.expires_at }}</span>
+                  </div>
+                  <div v-for="item in pkg.items" :key="item.id" class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                      <span>{{ item.service_name }}</span>
+                      <span class="text-gray-500">{{ item.used }}/{{ item.total }} usadas</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-100 rounded-full">
+                      <div class="h-1.5 rounded-full bg-green-500" :style="{ width: `${(item.used / item.total) * 100}%` }" />
+                    </div>
+                    <Button v-if="item.remaining > 0" size="sm" variant="outline"
+                      :class="selectedPackageItem?.id === item.id ? 'border-green-500 bg-green-50 text-green-700' : ''"
+                      class="w-full text-xs mt-1" @click="selectFromPackage(pkg, item)">
+                      {{ selectedPackageItem?.id === item.id ? 'Seleccionado' : `Usar 1 sesion (quedan ${item.remaining})` }}
+                    </Button>
+                    <p v-else class="text-xs text-gray-400">Todas las sesiones usadas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section B: Buy new package -->
+            <div v-if="availablePackages.length">
+              <p class="text-xs font-medium text-gray-500 mb-2">Comprar paquete nuevo</p>
+              <div class="space-y-2">
+                <div v-for="pkg in availablePackages" :key="pkg.id"
+                  :class="['border rounded-lg p-3 transition-colors cursor-pointer',
+                    purchasePackageId === pkg.id ? 'border-purple-500 bg-purple-50' : 'hover:bg-gray-50']"
+                  @click="selectBuyPackage(pkg)">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold">{{ pkg.name }}</h4>
+                    <span class="text-sm font-bold text-purple-700">${{ Number(pkg.price).toFixed(2) }}</span>
+                  </div>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <Badge v-for="item in pkg.items" :key="item.service_id" variant="secondary" class="text-[10px]">
+                      {{ item.quantity }}x {{ item.service_name }}
+                    </Badge>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">Validez: {{ pkg.validity_days }} dias · {{ pkg.type === 'sessions' ? 'Bono sesiones' : 'Combo' }}</p>
+                  <p v-if="purchasePackageId === pkg.id" class="text-xs text-purple-600 font-medium mt-1">Primera sesion incluida hoy</p>
+                </div>
+              </div>
+            </div>
+
+            <p v-if="!loadingPackages && !clientActivePackages.length && !availablePackages.length" class="text-sm text-gray-400 text-center py-4">
+              No hay paquetes disponibles
+            </p>
           </div>
 
           <div class="flex justify-between pt-2">
@@ -276,30 +383,22 @@ const close = () => { resetForm(); emit('close') }
               <option v-for="s in stylists" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
           </div>
-
           <div class="space-y-2">
             <Label>Fecha</Label>
             <Input v-model="selectedDate" type="date" />
           </div>
-
           <div class="space-y-2">
             <Label>Hora disponible</Label>
             <div v-if="loadingSlots" class="text-sm text-gray-400">Cargando slots...</div>
             <div v-else-if="availableSlots.length" class="grid grid-cols-4 gap-1.5">
-              <button
-                v-for="slot in availableSlots"
-                :key="slot.time"
-                @click="selectedTime = slot.time"
+              <button v-for="slot in availableSlots" :key="slot.time" @click="selectedTime = slot.time"
                 :class="['py-1.5 text-xs rounded border transition-colors',
                   selectedTime === slot.time ? 'bg-primary text-white border-primary' : 'hover:bg-gray-50']"
               >{{ slot.time }}</button>
             </div>
             <p v-else class="text-sm text-gray-400">No hay horarios disponibles</p>
-            <p v-if="selectedTime && endTime" class="text-xs text-gray-500">
-              Hora fin estimada: {{ endTime }}
-            </p>
+            <p v-if="selectedTime && endTime" class="text-xs text-gray-500">Hora fin estimada: {{ endTime }}</p>
           </div>
-
           <div class="flex justify-between pt-2">
             <Button variant="outline" @click="step = 2">Atras</Button>
             <Button :disabled="!selectedTime" @click="step = 4">Siguiente</Button>
@@ -315,11 +414,22 @@ const close = () => { resetForm(); emit('close') }
 
           <div class="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <p><span class="text-gray-500">Cliente:</span> <span class="font-medium">{{ selectedClient?.first_name }} {{ selectedClient?.last_name }}</span></p>
-            <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ selectedService?.name }}</span> — {{ selectedService?.duration_minutes }}min — ${{ Number(selectedService?.base_price || 0).toFixed(2) }}</p>
+            <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ selectedService?.name }}</span> — {{ selectedService?.duration_minutes }}min</p>
+            <p><span class="text-gray-500">Precio:</span> <span class="font-medium">{{ summaryPrice }}</span></p>
             <p><span class="text-gray-500">Estilista:</span> <span class="font-medium">{{ stylists?.find(s => s.id === selectedStylist)?.name }}</span></p>
             <p><span class="text-gray-500">Fecha:</span> <span class="font-medium">{{ selectedDate }} a las {{ selectedTime }}</span></p>
-            <div v-if="packageInfo && usePackage" class="bg-green-50 rounded p-2 mt-2">
-              <p class="text-green-700 text-xs font-medium">Se descontara 1 sesion del paquete "{{ packageInfo.package_name }}" (quedan {{ packageInfo.remaining }})</p>
+
+            <!-- Package info in summary -->
+            <div v-if="appointmentMode === 'package_use' && selectedPackageItem" class="bg-green-50 border border-green-200 rounded p-2 mt-2">
+              <p class="text-green-700 text-xs font-medium">
+                Sesion del paquete "{{ selectedPackageItem.package_name }}"
+                (quedaran {{ selectedPackageItem.remaining - 1 }} sesiones)
+              </p>
+            </div>
+            <div v-if="appointmentMode === 'package_buy'" class="bg-purple-50 border border-purple-200 rounded p-2 mt-2">
+              <p class="text-purple-700 text-xs font-medium">
+                Compra de paquete — primera sesion incluida
+              </p>
             </div>
           </div>
 

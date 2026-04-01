@@ -142,4 +142,38 @@ class PackageController extends Controller
 
         return response()->json($packages);
     }
+
+    // For appointment modal: client's active packages + available packages to buy
+    public function forAppointment(Request $request)
+    {
+        $request->validate(['client_id' => ['required', 'uuid']]);
+
+        $clientActive = ClientPackage::where('client_id', $request->client_id)
+            ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->with('items')
+            ->get()
+            ->map(fn ($cp) => [
+                'id' => $cp->id,
+                'package_name' => $cp->package_name,
+                'expires_at' => $cp->expires_at?->format('d/m/Y'),
+                'items' => $cp->items->map(fn ($i) => [
+                    'id' => $i->id,
+                    'service_id' => $i->service_id,
+                    'service_name' => $i->service_name,
+                    'total' => $i->total_quantity,
+                    'used' => $i->used_quantity,
+                    'remaining' => $i->remaining,
+                ]),
+            ]);
+
+        $availableToBuy = Package::where('is_active', true)->orderBy('name')->get([
+            'id', 'name', 'price', 'type', 'items', 'validity_days',
+        ]);
+
+        return response()->json([
+            'active' => $clientActive,
+            'available' => $availableToBuy,
+        ]);
+    }
 }

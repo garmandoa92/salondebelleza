@@ -218,6 +218,7 @@ Route::prefix('/salon/{tenant}')->middleware([
                 'destroy' => 'tenant.packages.destroy',
             ]);
         Route::get('packages/check-client', [PackageController::class, 'checkClientPackage'])->name('tenant.packages.check');
+        Route::get('packages/for-appointment', [PackageController::class, 'forAppointment'])->name('tenant.packages.for-appointment');
         Route::post('packages/use-session', [PackageController::class, 'useSession'])->name('tenant.packages.use-session');
         Route::get('packages/client/{clientId}', [PackageController::class, 'clientPackages'])->name('tenant.packages.client');
     });
