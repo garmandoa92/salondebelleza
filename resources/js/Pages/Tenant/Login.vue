@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,8 +14,11 @@ const form = useForm({
   remember: false,
 })
 
+const page = usePage()
+const tenantId = page.props.tenant?.id
+
 const submit = () => {
-  form.post('/login')
+  form.post(`/salon/${tenantId}/login`)
 }
 </script>
 

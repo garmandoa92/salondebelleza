@@ -11,7 +11,6 @@ return [
     'domain_model' => Domain::class,
 
     'central_domains' => [
-        'miapp.test',
         'localhost',
         '127.0.0.1',
     ],

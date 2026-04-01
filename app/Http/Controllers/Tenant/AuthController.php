@@ -22,7 +22,7 @@ class AuthController extends Controller
                     if ($user) {
                         Auth::login($user);
                         $user->update(['last_login_at' => now()]);
-                        return redirect()->route('tenant.dashboard');
+                        return redirect()->route('tenant.dashboard', ['tenant' => tenant('id')]);
                     }
                 }
             } catch (\Exception $e) {
@@ -59,7 +59,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('tenant.dashboard'));
+        return redirect()->intended(route('tenant.dashboard', ['tenant' => tenant('id')]));
     }
 
     public function logout(Request $request)
@@ -69,6 +69,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('tenant.login');
+        return redirect()->route('tenant.login', ['tenant' => tenant('id')]);
     }
 }

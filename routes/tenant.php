@@ -3,20 +3,18 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use App\Http\Middleware\EnsureTenantIsActive;
 use App\Http\Middleware\RedirectIfTrialExpired;
 
-Route::middleware([
+Route::prefix('/salon/{tenant}')->middleware([
     'web',
-    InitializeTenancyBySubdomain::class,
-    PreventAccessFromCentralDomains::class,
+    InitializeTenancyByPath::class,
     EnsureTenantIsActive::class,
     RedirectIfTrialExpired::class,
 ])->group(function () {
     Route::get('/', function () {
-        return redirect()->route('tenant.dashboard');
+        return redirect()->route('tenant.dashboard', ['tenant' => tenant('id')]);
     });
 
     Route::get('/dashboard', function () {
@@ -32,11 +30,11 @@ Route::middleware([
     })->name('tenant.upgrade');
 
     // Tenant auth routes
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [\App\Http\Controllers\Tenant\AuthController::class, 'showLogin'])
-            ->name('tenant.login');
-        Route::post('/login', [\App\Http\Controllers\Tenant\AuthController::class, 'login']);
-    });
+    Route::get('/login', [\App\Http\Controllers\Tenant\AuthController::class, 'showLogin'])
+        ->name('tenant.login');
+    Route::post('/login', [\App\Http\Controllers\Tenant\AuthController::class, 'login'])
+        ->middleware('guest')
+        ->name('tenant.login.post');
 
     Route::post('/logout', [\App\Http\Controllers\Tenant\AuthController::class, 'logout'])
         ->middleware('auth')

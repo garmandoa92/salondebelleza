@@ -23,8 +23,7 @@ class RegisterController extends Controller
         $result = $this->tenantService->createTenant($request->validated());
 
         $tenant = $result['tenant'];
-        $domain = $tenant->slug . '.' . config('tenancy.central_domains')[0];
 
-        return redirect()->away("http://{$domain}/dashboard");
+        return redirect("/salon/{$tenant->id}/dashboard");
     }
 }

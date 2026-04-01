@@ -65,7 +65,7 @@ const submit = () => {
               required
             />
             <span class="inline-flex items-center px-3 h-9 border border-l-0 border-input rounded-r-md bg-muted text-sm text-muted-foreground">
-              .miapp.test
+              .salon
             </span>
           </div>
           <p v-if="form.errors.slug" class="text-sm text-red-500">{{ form.errors.slug }}</p>

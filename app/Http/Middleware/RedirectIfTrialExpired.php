@@ -31,6 +31,6 @@ class RedirectIfTrialExpired
             return $next($request);
         }
 
-        return redirect()->route('tenant.upgrade');
+        return redirect()->route('tenant.upgrade', ['tenant' => $tenant->id]);
     }
 }

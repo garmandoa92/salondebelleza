@@ -34,13 +34,14 @@ class LoginController extends Controller
         $tenantUser->update(['last_login_at' => now()]);
 
         $tenant = $tenantUser->tenant;
-        $domain = $tenant->slug . '.' . config('tenancy.central_domains')[0];
 
-        return redirect()->away("http://{$domain}/login?token=" . encrypt([
+        $token = encrypt([
             'email' => $tenantUser->email,
             'tenant_id' => $tenant->id,
             'expires' => now()->addMinutes(5)->timestamp,
-        ]));
+        ]);
+
+        return Inertia::location("/salon/{$tenant->id}/login?token={$token}");
     }
 
     public function destroy(Request $request)
