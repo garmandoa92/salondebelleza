@@ -32,6 +32,19 @@ const saving = ref(false)
 const completed = ref(false)
 const completedSaleId = ref(null)
 
+watch(() => props.open, (val) => {
+  if (val) {
+    completed.value = false
+    completedSaleId.value = null
+    items.value = props.preItems.length ? props.preItems.map(i => ({ ...i })) : []
+    discount.value = { enabled: false, type: 'percentage', amount: 0, reason: '' }
+    tip.value = { amount: 0, stylist_id: '' }
+    payments.value = [{ method: 'cash', amount: 0, received: 0 }]
+    invoiceRequired.value = false
+    invoiceData.value = { buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '' }
+  }
+})
+
 onMounted(async () => {
   const { data } = await axios.get(`${base}/ventas/checkout-data`)
   services.value = data.services
