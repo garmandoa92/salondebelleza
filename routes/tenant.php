@@ -14,6 +14,8 @@ use App\Http\Controllers\Tenant\BlockedTimeController;
 use App\Http\Controllers\Tenant\AppointmentController;
 use App\Http\Controllers\Tenant\BookingController;
 use App\Http\Controllers\Tenant\ClientController;
+use App\Http\Controllers\Tenant\SaleController;
+use App\Http\Controllers\Tenant\SriInvoiceController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -118,5 +120,20 @@ Route::prefix('/salon/{tenant}')->middleware([
                 'update' => 'tenant.clients.update',
                 'destroy' => 'tenant.clients.destroy',
             ]);
+
+        // Sales / Checkout
+        Route::get('ventas', [SaleController::class, 'index'])->name('tenant.sales.index');
+        Route::get('ventas/summary', [SaleController::class, 'summary'])->name('tenant.sales.summary');
+        Route::get('ventas/checkout-data', [SaleController::class, 'checkoutData'])->name('tenant.sales.checkout-data');
+        Route::post('ventas', [SaleController::class, 'store'])->name('tenant.sales.store');
+        Route::get('ventas/{sale}', [SaleController::class, 'show'])->name('tenant.sales.show');
+        Route::post('ventas/{sale}/invoice', [SaleController::class, 'invoice'])->name('tenant.sales.invoice');
+
+        // SRI Invoices
+        Route::get('facturacion', [SriInvoiceController::class, 'index'])->name('tenant.invoices.index');
+        Route::get('facturacion/{invoice}', [SriInvoiceController::class, 'show'])->name('tenant.invoices.show');
+        Route::get('facturacion/{invoice}/ride', [SriInvoiceController::class, 'ride'])->name('tenant.invoices.ride');
+        Route::get('facturacion/{invoice}/xml', [SriInvoiceController::class, 'xml'])->name('tenant.invoices.xml');
+        Route::post('facturacion/{invoice}/retry', [SriInvoiceController::class, 'retry'])->name('tenant.invoices.retry');
     });
 });
