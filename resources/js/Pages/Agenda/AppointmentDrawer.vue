@@ -47,8 +47,9 @@ const doAction = async (action) => {
   emit('updated')
 }
 
+const isPackageSession = computed(() => !!apt.value?.client_package_item_id)
+
 const openCheckout = () => {
-  // Emit checkout event with appointment data so parent can open Checkout modal
   emit('checkout', {
     appointmentId: apt.value.id,
     clientId: apt.value.client_id,
@@ -66,6 +67,23 @@ const openCheckout = () => {
     }],
   })
   emit('close')
+}
+
+const completingPackage = ref(false)
+const completePackageSession = async () => {
+  completingPackage.value = true
+  try {
+    // Complete the appointment
+    await axios.post(`${base}/agenda/appointments/${apt.value.id}/complete`)
+    // Use the package session
+    await axios.post(`${base}/packages/use-session`, {
+      client_package_item_id: apt.value.client_package_item_id,
+      appointment_id: apt.value.id,
+    })
+    const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}`)
+    apt.value = data
+    emit('updated')
+  } finally { completingPackage.value = false }
 }
 
 const doCancel = async () => {
@@ -133,7 +151,8 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
               <p class="text-gray-500 text-xs">Precio</p>
-              <p class="font-medium">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
+              <p v-if="isPackageSession" class="font-medium text-green-600">Paquete</p>
+              <p v-else class="font-medium">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
             </div>
           </div>
 
@@ -178,7 +197,14 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
             </template>
 
             <template v-else-if="status === 'in_progress'">
-              <Button class="w-full bg-green-600 hover:bg-green-700" @click="openCheckout">Completar y cobrar →</Button>
+              <div v-if="isPackageSession" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm mb-2">
+                <p class="font-medium text-green-800">Sesion de paquete — ya pagada</p>
+                <p class="text-green-600 text-xs">Al completar se descuenta 1 sesion automaticamente</p>
+              </div>
+              <Button v-if="isPackageSession" class="w-full bg-green-600 hover:bg-green-700" :disabled="completingPackage" @click="completePackageSession">
+                {{ completingPackage ? 'Completando...' : 'Completar sesion de paquete' }}
+              </Button>
+              <Button v-else class="w-full bg-green-600 hover:bg-green-700" @click="openCheckout">Completar y cobrar →</Button>
               <Button variant="outline" class="w-full text-red-600 border-red-300" @click="showCancel = true">Cancelar</Button>
             </template>
 
