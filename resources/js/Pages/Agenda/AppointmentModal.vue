@@ -58,19 +58,29 @@ const selectedService = ref(null)
 // Package check
 const packageInfo = ref(null)
 const usePackage = ref(true)
+const checkingPackage = ref(false)
 
-watch([selectedClient, selectedService], async ([client, service]) => {
+const checkPackage = async () => {
   packageInfo.value = null
-  if (!client?.id || !service?.id) return
+  if (!selectedClient.value?.id || !selectedService.value?.id) return
+  checkingPackage.value = true
   try {
     const { data } = await axios.get(`${base}/packages/check-client`, {
-      params: { client_id: client.id, service_id: service.id },
+      params: { client_id: selectedClient.value.id, service_id: selectedService.value.id },
     })
     if (data.has_package) {
       packageInfo.value = data
       usePackage.value = true
     }
-  } catch {}
+  } catch (e) {
+    console.warn('Package check failed:', e)
+  } finally {
+    checkingPackage.value = false
+  }
+}
+
+watch(selectedService, (svc) => {
+  if (svc?.id && selectedClient.value?.id) checkPackage()
 })
 
 // Step 3 - Schedule
@@ -162,6 +172,20 @@ const close = () => { resetForm(); emit('close') }
         >{{ s.l }}</button>
       </div>
 
+      <!-- Package banner (visible in steps 2-4) -->
+      <div v-if="packageInfo && step >= 2" class="mx-5 mt-4 bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="font-medium text-green-800">Este cliente tiene {{ packageInfo.remaining }} sesiones disponibles</p>
+            <p class="text-green-600 text-xs">Paquete: {{ packageInfo.package_name }} · Vence: {{ packageInfo.expires_at }}</p>
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer shrink-0">
+            <input type="checkbox" v-model="usePackage" class="rounded border-gray-300" />
+            <span class="text-xs text-green-700">Descontar del paquete</span>
+          </label>
+        </div>
+      </div>
+
       <div class="p-5">
         <!-- Step 1: Client -->
         <div v-show="step === 1" class="space-y-4">
@@ -228,20 +252,6 @@ const close = () => { resetForm(); emit('close') }
                 <p class="font-medium">{{ svc.name }}</p>
                 <p class="text-gray-500 text-xs">{{ svc.duration_minutes }}min — ${{ Number(svc.base_price).toFixed(2) }}</p>
               </button>
-            </div>
-          </div>
-
-          <!-- Package banner -->
-          <div v-if="packageInfo" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-            <div class="flex items-start justify-between">
-              <div>
-                <p class="font-medium text-green-800">Este cliente tiene {{ packageInfo.remaining }} sesiones disponibles</p>
-                <p class="text-green-600 text-xs">Paquete: {{ packageInfo.package_name }} · Vence: {{ packageInfo.expires_at }}</p>
-              </div>
-              <label class="flex items-center gap-2 cursor-pointer shrink-0">
-                <input type="checkbox" v-model="usePackage" class="rounded border-gray-300" />
-                <span class="text-xs text-green-700">Descontar del paquete</span>
-              </label>
             </div>
           </div>
 
