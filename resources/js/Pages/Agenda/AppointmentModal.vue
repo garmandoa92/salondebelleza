@@ -55,6 +55,24 @@ const createClient = async () => {
 // Step 2 - Service
 const selectedService = ref(null)
 
+// Package check
+const packageInfo = ref(null)
+const usePackage = ref(true)
+
+watch([selectedClient, selectedService], async ([client, service]) => {
+  packageInfo.value = null
+  if (!client?.id || !service?.id) return
+  try {
+    const { data } = await axios.get(`${base}/packages/check-client`, {
+      params: { client_id: client.id, service_id: service.id },
+    })
+    if (data.has_package) {
+      packageInfo.value = data
+      usePackage.value = true
+    }
+  } catch {}
+})
+
 // Step 3 - Schedule
 const selectedStylist = ref(props.prefill?.stylist_id || '')
 const selectedDate = ref(props.prefill?.starts_at ? new Date(props.prefill.starts_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10))
@@ -99,14 +117,18 @@ const submit = async () => {
   if (!canSubmit.value) return
   saving.value = true
   try {
-    await axios.post(`${base}/agenda/appointments`, {
+    const payload = {
       client_id: selectedClient.value.id,
       service_id: selectedService.value.id,
       stylist_id: selectedStylist.value,
       starts_at: `${selectedDate.value}T${selectedTime.value}:00`,
       notes: notes.value || null,
       source: 'manual',
-    })
+    }
+    if (packageInfo.value && usePackage.value) {
+      payload.client_package_item_id = packageInfo.value.client_package_item_id
+    }
+    await axios.post(`${base}/agenda/appointments`, payload)
     emit('created')
     resetForm()
   } finally { saving.value = false }
@@ -119,6 +141,8 @@ const resetForm = () => {
   selectedTime.value = ''
   notes.value = ''
   clientSearch.value = ''
+  packageInfo.value = null
+  usePackage.value = true
 }
 
 const close = () => { resetForm(); emit('close') }
@@ -207,6 +231,20 @@ const close = () => { resetForm(); emit('close') }
             </div>
           </div>
 
+          <!-- Package banner -->
+          <div v-if="packageInfo" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="font-medium text-green-800">Este cliente tiene {{ packageInfo.remaining }} sesiones disponibles</p>
+                <p class="text-green-600 text-xs">Paquete: {{ packageInfo.package_name }} · Vence: {{ packageInfo.expires_at }}</p>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer shrink-0">
+                <input type="checkbox" v-model="usePackage" class="rounded border-gray-300" />
+                <span class="text-xs text-green-700">Descontar del paquete</span>
+              </label>
+            </div>
+          </div>
+
           <div class="flex justify-between pt-2">
             <Button variant="outline" @click="step = 1">Atras</Button>
             <Button :disabled="!selectedService" @click="step = 3">Siguiente</Button>
@@ -264,6 +302,9 @@ const close = () => { resetForm(); emit('close') }
             <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ selectedService?.name }}</span> — {{ selectedService?.duration_minutes }}min — ${{ Number(selectedService?.base_price || 0).toFixed(2) }}</p>
             <p><span class="text-gray-500">Estilista:</span> <span class="font-medium">{{ stylists?.find(s => s.id === selectedStylist)?.name }}</span></p>
             <p><span class="text-gray-500">Fecha:</span> <span class="font-medium">{{ selectedDate }} a las {{ selectedTime }}</span></p>
+            <div v-if="packageInfo && usePackage" class="bg-green-50 rounded p-2 mt-2">
+              <p class="text-green-700 text-xs font-medium">Se descontara 1 sesion del paquete "{{ packageInfo.package_name }}" (quedan {{ packageInfo.remaining }})</p>
+            </div>
           </div>
 
           <div class="flex justify-between pt-2">

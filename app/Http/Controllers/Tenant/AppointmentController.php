@@ -72,6 +72,7 @@ class AppointmentController extends Controller
             'ends_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'source' => ['nullable', 'string'],
+            'client_package_item_id' => ['nullable', 'uuid'],
         ]);
 
         $data['created_by'] = auth()->id();
@@ -81,6 +82,10 @@ class AppointmentController extends Controller
         $data['branch_id'] = session('current_branch_id');
 
         $appointment = $this->appointmentService->store($data);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'id' => $appointment->id]);
+        }
 
         return back()->with('success', 'Cita creada.');
     }
