@@ -16,6 +16,8 @@ use App\Http\Controllers\Tenant\BookingController;
 use App\Http\Controllers\Tenant\ClientController;
 use App\Http\Controllers\Tenant\SaleController;
 use App\Http\Controllers\Tenant\SriInvoiceController;
+use App\Http\Controllers\Tenant\ProductController;
+use App\Http\Controllers\Tenant\StockMovementController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -135,5 +137,22 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('facturacion/{invoice}/ride', [SriInvoiceController::class, 'ride'])->name('tenant.invoices.ride');
         Route::get('facturacion/{invoice}/xml', [SriInvoiceController::class, 'xml'])->name('tenant.invoices.xml');
         Route::post('facturacion/{invoice}/retry', [SriInvoiceController::class, 'retry'])->name('tenant.invoices.retry');
+
+        // Products / Inventory
+        Route::resource('inventario', ProductController::class)
+            ->parameters(['inventario' => 'product'])
+            ->names([
+                'index' => 'tenant.products.index',
+                'create' => 'tenant.products.create',
+                'store' => 'tenant.products.store',
+                'edit' => 'tenant.products.edit',
+                'update' => 'tenant.products.update',
+                'destroy' => 'tenant.products.destroy',
+            ]);
+
+        // Stock Movements
+        Route::get('stock/movements', [StockMovementController::class, 'index'])->name('tenant.stock.movements');
+        Route::post('stock/purchase', [StockMovementController::class, 'purchase'])->name('tenant.stock.purchase');
+        Route::post('stock/adjustment', [StockMovementController::class, 'adjustment'])->name('tenant.stock.adjustment');
     });
 });
