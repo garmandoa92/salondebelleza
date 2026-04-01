@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Checkout from './Checkout.vue'
+import SaleDrawer from './SaleDrawer.vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -18,6 +19,13 @@ const props = defineProps({
 const page = usePage()
 const tenantId = page.props.tenant?.id
 const showCheckout = ref(false)
+const showDrawer = ref(false)
+const selectedSaleId = ref(null)
+
+const openSale = (id) => {
+  selectedSaleId.value = id
+  showDrawer.value = true
+}
 
 const formatDate = (d) => new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const statusLabels = { draft: 'Borrador', completed: 'Completada', refunded: 'Reembolsada' }
@@ -82,7 +90,7 @@ const statusColors = { draft: 'bg-gray-100 text-gray-700', completed: 'bg-green-
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sale in sales.data" :key="sale.id" class="border-b last:border-0 hover:bg-gray-50">
+            <tr v-for="sale in sales.data" :key="sale.id" class="border-b last:border-0 hover:bg-gray-50 cursor-pointer" @click="openSale(sale.id)">
               <td class="py-3 text-gray-600">{{ formatDate(sale.completed_at || sale.created_at) }}</td>
               <td class="py-3 font-medium">{{ sale.client ? `${sale.client.first_name} ${sale.client.last_name}` : 'Sin cliente' }}</td>
               <td class="py-3 text-center">{{ sale.items?.length || 0 }}</td>
@@ -104,5 +112,6 @@ const statusColors = { draft: 'bg-gray-100 text-gray-700', completed: 'bg-green-
     </Card>
 
     <Checkout :open="showCheckout" @close="showCheckout = false" @completed="showCheckout = false" />
+    <SaleDrawer :open="showDrawer" :saleId="selectedSaleId" @close="showDrawer = false" />
   </div>
 </template>

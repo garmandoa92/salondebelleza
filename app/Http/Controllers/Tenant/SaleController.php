@@ -47,7 +47,18 @@ class SaleController extends Controller
 
     public function show(Sale $sale)
     {
-        $sale->load(['client', 'items.stylist:id,name', 'sriInvoice', 'appointment.service:id,name']);
+        $sale->load([
+            'client:id,first_name,last_name,phone,email',
+            'items.stylist:id,name,color',
+            'sriInvoice',
+            'appointment.service:id,name',
+        ]);
+
+        // Attach commissions per item
+        $commissions = \App\Models\Commission::whereIn('sale_item_id', $sale->items->pluck('id'))->get();
+        $sale->items->each(function ($item) use ($commissions) {
+            $item->commission = $commissions->firstWhere('sale_item_id', $item->id);
+        });
 
         return response()->json($sale);
     }
