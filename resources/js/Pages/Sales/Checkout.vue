@@ -22,6 +22,7 @@ const base = `/salon/${tenantId}`
 const items = ref([])
 const services = ref([])
 const products = ref([])
+const packages = ref([])
 const stylists = ref([])
 const discount = ref({ enabled: false, type: 'percentage', amount: 0, reason: '' })
 const tip = ref({ amount: 0, stylist_id: '' })
@@ -49,6 +50,7 @@ onMounted(async () => {
   const { data } = await axios.get(`${base}/ventas/checkout-data`)
   services.value = data.services
   products.value = data.products
+  packages.value = data.packages || []
   stylists.value = data.stylists
 
   if (props.preItems.length) {
@@ -90,6 +92,20 @@ const addItem = (type, item) => {
     iva_amount: 0,
     discount_amount: 0,
     stylist_id: stylists.value[0]?.id || null,
+  })
+}
+
+const addPackage = (pkg) => {
+  items.value.push({
+    type: 'package',
+    reference_id: pkg.id,
+    name: pkg.name,
+    quantity: 1,
+    unit_price: Number(pkg.price),
+    subtotal: Number(pkg.price),
+    iva_amount: 0,
+    discount_amount: 0,
+    stylist_id: null,
   })
 }
 
@@ -179,6 +195,10 @@ const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit:
                       <select class="text-xs border rounded px-2 py-1" @change="e => { const p = products.find(x => x.id === e.target.value); if(p) addItem('product', p); e.target.value='' }">
                         <option value="">+ Producto</option>
                         <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - ${{ Number(p.sale_price).toFixed(2) }} ({{ p.stock }})</option>
+                      </select>
+                      <select v-if="packages.length" class="text-xs border rounded px-2 py-1" @change="e => { const pk = packages.find(x => x.id === e.target.value); if(pk) addPackage(pk); e.target.value='' }">
+                        <option value="">+ Paquete</option>
+                        <option v-for="pk in packages" :key="pk.id" :value="pk.id">{{ pk.name }} - ${{ Number(pk.price).toFixed(2) }}</option>
                       </select>
                     </div>
                   </div>

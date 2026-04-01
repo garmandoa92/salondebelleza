@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SriInvoice;
+use App\Services\PackageService;
 use App\Services\Sri\SriAccessKeyGenerator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +98,15 @@ class SaleService
             // Update client total_spent
             if ($sale->client_id) {
                 $sale->client?->increment('total_spent', (float) $sale->total);
+            }
+
+            // Create ClientPackage for package items
+            if ($sale->client_id) {
+                foreach ($data['items'] as $item) {
+                    if (($item['type'] ?? '') === 'package') {
+                        (new PackageService())->createClientPackage($sale->client_id, $item['reference_id'], $sale->id);
+                    }
+                }
             }
 
             return $sale;

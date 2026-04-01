@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
+import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +21,16 @@ const props = defineProps({
 const page = usePage()
 const tenantId = page.props.tenant?.id
 const activeTab = ref('historial')
+const clientPackages = ref([])
+
+const loadPackages = async () => {
+  try {
+    const { data } = await axios.get(`/salon/${tenantId}/packages/client/${props.client.id}`)
+    clientPackages.value = data
+  } catch {}
+}
+
+onMounted(() => loadPackages())
 
 const initials = ((props.client.first_name?.[0] || '') + (props.client.last_name?.[0] || '')).toUpperCase()
 
@@ -149,7 +160,7 @@ const daysToBirthday = () => {
         <!-- Tab nav -->
         <div class="flex border-b">
           <button
-            v-for="tab in [{ key: 'historial', label: 'Historial' }, { key: 'compras', label: 'Compras' }, { key: 'futuras', label: 'Citas futuras' }]"
+            v-for="tab in [{ key: 'historial', label: 'Historial' }, { key: 'compras', label: 'Compras' }, { key: 'paquetes', label: 'Paquetes' }, { key: 'futuras', label: 'Citas futuras' }]"
             :key="tab.key"
             @click="activeTab = tab.key"
             :class="['px-4 py-2 text-sm font-medium border-b-2 transition-colors',
@@ -197,6 +208,43 @@ const daysToBirthday = () => {
               </div>
             </div>
             <p v-else class="text-sm text-gray-400 text-center py-6">Sin compras registradas</p>
+          </CardContent>
+        </Card>
+
+        <!-- Tab: Paquetes -->
+        <Card v-if="activeTab === 'paquetes'">
+          <CardContent class="pt-4 space-y-4">
+            <div v-if="clientPackages.length">
+              <div v-for="cp in clientPackages" :key="cp.id" class="border rounded-lg p-4 space-y-3 mb-3">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h4 class="font-semibold">{{ cp.package_name }}</h4>
+                    <p class="text-xs text-gray-500">Comprado: {{ new Date(cp.purchased_at).toLocaleDateString('es-EC') }} · Vence: {{ cp.expires_at ? new Date(cp.expires_at).toLocaleDateString('es-EC') : 'Sin vencimiento' }}</p>
+                  </div>
+                  <Badge :class="cp.status === 'active' ? 'bg-green-100 text-green-700' : cp.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'" class="text-xs">
+                    {{ cp.status === 'active' ? 'Activo' : cp.status === 'completed' ? 'Completado' : 'Vencido' }}
+                  </Badge>
+                </div>
+
+                <div v-for="item in cp.items" :key="item.id" class="space-y-1">
+                  <div class="flex items-center justify-between text-sm">
+                    <span>{{ item.service_name }}</span>
+                    <span class="text-gray-500">{{ item.used_quantity }}/{{ item.total_quantity }} usadas</span>
+                  </div>
+                  <div class="w-full h-2 bg-gray-100 rounded-full">
+                    <div
+                      class="h-2 rounded-full transition-all"
+                      :class="item.used_quantity >= item.total_quantity ? 'bg-blue-500' : 'bg-green-500'"
+                      :style="{ width: `${Math.min(100, (item.used_quantity / item.total_quantity) * 100)}%` }"
+                    />
+                  </div>
+                  <p class="text-xs text-gray-400">
+                    {{ item.total_quantity - item.used_quantity > 0 ? `Quedan ${item.total_quantity - item.used_quantity} sesiones` : 'Todas las sesiones usadas' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-400 text-center py-6">Este cliente no tiene paquetes</p>
           </CardContent>
         </Card>
 

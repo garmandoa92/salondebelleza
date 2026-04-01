@@ -119,6 +119,7 @@ class SaleController extends Controller
         return response()->json([
             'services' => Service::where('is_visible', true)->get(['id', 'name', 'base_price', 'duration_minutes']),
             'products' => Product::where('is_active', true)->where('type', 'sale')->get(['id', 'name', 'sale_price', 'stock']),
+            'packages' => \App\Models\Package::where('is_active', true)->orderBy('name')->get(['id', 'name', 'price', 'type']),
             'stylists' => Stylist::where('is_active', true)->get(['id', 'name', 'color']),
         ]);
     }
