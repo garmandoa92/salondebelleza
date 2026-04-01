@@ -22,6 +22,7 @@ use App\Http\Controllers\Tenant\NotificationController;
 use App\Http\Controllers\Tenant\CommissionController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\SettingsController;
+use App\Http\Controllers\Tenant\ReportController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -178,5 +179,15 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::put('settings/payments', [SettingsController::class, 'updatePayments'])->name('tenant.settings.payments');
         Route::post('settings/invite', [SettingsController::class, 'inviteUser'])->name('tenant.settings.invite');
         Route::patch('settings/users/{user}/toggle', [SettingsController::class, 'toggleUser'])->name('tenant.settings.toggle-user');
+
+        // Reports
+        Route::get('reportes', [ReportController::class, 'index'])->name('tenant.reports.index');
+        Route::get('reportes/revenue', [ReportController::class, 'revenue'])->name('tenant.reports.revenue');
+        Route::get('reportes/services', [ReportController::class, 'services'])->name('tenant.reports.services');
+        Route::get('reportes/stylists', [ReportController::class, 'stylists'])->name('tenant.reports.stylists');
+        Route::get('reportes/clients', [ReportController::class, 'clients'])->name('tenant.reports.clients');
+        Route::get('reportes/demand', [ReportController::class, 'demand'])->name('tenant.reports.demand');
+        Route::get('reportes/inventory', [ReportController::class, 'inventory'])->name('tenant.reports.inventory');
+        Route::get('reportes/forecast', [ReportController::class, 'forecast'])->name('tenant.reports.forecast');
     });
 });
