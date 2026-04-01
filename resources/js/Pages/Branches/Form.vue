@@ -44,11 +44,18 @@ const form = useForm({
   schedule: props.branch?.schedule || { ...defaultSchedule },
   sri_establishment: props.branch?.sri_establishment || '001',
   sri_emission_point: props.branch?.sri_emission_point || '001',
+  sri_override: props.branch?.ruc || props.branch?.sri_ambiente === 'production' || false,
   sri_ambiente: props.branch?.sri_ambiente || 'test',
   sri_regimen: props.branch?.sri_regimen || 'general',
   sri_obligado_contabilidad: props.branch?.sri_obligado_contabilidad || 'NO',
   is_active: props.branch?.is_active ?? true,
   stylist_ids: props.branch?.stylists?.map(s => s.id) || [],
+})
+
+// Detect if branch has custom SRI config (different from defaults)
+const hasCustomSri = computed(() => {
+  if (!props.branch) return false
+  return props.branch.ruc || props.branch.sri_ambiente === 'production'
 })
 
 // Certificate form (separate, only for editing)
@@ -96,10 +103,6 @@ const toggleStylist = (id) => {
             <div class="space-y-2"><Label>Telefono</Label><Input v-model="form.phone" /></div>
             <div class="space-y-2"><Label>Email</Label><Input v-model="form.email" type="email" /></div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2"><Label>RUC (13 digitos)</Label><Input v-model="form.ruc" maxlength="13" placeholder="Si difiere del salon principal" /></div>
-            <div class="space-y-2"><Label>Razon social</Label><Input v-model="form.razon_social" placeholder="Si difiere del salon principal" /></div>
-          </div>
           <div class="space-y-2">
             <Label>Gerente</Label>
             <select v-model="form.manager_user_id" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
@@ -112,56 +115,69 @@ const toggleStylist = (id) => {
 
       <!-- Configuracion SRI -->
       <Card>
-        <CardHeader><CardTitle class="text-base">Configuracion SRI</CardTitle></CardHeader>
+        <CardHeader><CardTitle class="text-base">Facturacion SRI</CardTitle></CardHeader>
         <CardContent class="space-y-4">
+          <p class="text-sm text-gray-500">El RUC, certificado, regimen y ambiente se heredan de <strong>Configuracion &gt; SRI</strong>. Aqui solo configuras lo que cambia por sucursal.</p>
+
           <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2"><Label>Establecimiento</Label><Input v-model="form.sri_establishment" maxlength="3" /></div>
+            <div class="space-y-2"><Label>Establecimiento</Label><Input v-model="form.sri_establishment" maxlength="3" /><p class="text-xs text-gray-400">Ej: 001 = matriz, 002 = sucursal norte</p></div>
             <div class="space-y-2"><Label>Punto de emision</Label><Input v-model="form.sri_emission_point" maxlength="3" /></div>
           </div>
-          <div class="space-y-2">
-            <Label>Ambiente</Label>
-            <select v-model="form.sri_ambiente" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-              <option value="test">Pruebas</option>
-              <option value="production">Produccion</option>
-            </select>
-          </div>
-          <div class="space-y-2">
-            <Label>Regimen tributario</Label>
-            <select v-model="form.sri_regimen" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-              <option value="general">Regimen General</option>
-              <option value="rimpe_emprendedor">RIMPE Emprendedor</option>
-              <option value="rimpe_negocio_popular">RIMPE Negocio Popular</option>
-            </select>
-          </div>
-          <div class="space-y-2">
-            <Label>Obligado a llevar contabilidad</Label>
-            <select v-model="form.sri_obligado_contabilidad" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-              <option value="NO">NO</option>
-              <option value="SI">SI</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
 
-      <!-- Certificado digital (solo al editar) -->
-      <Card v-if="isEditing">
-        <CardHeader><CardTitle class="text-base">Certificado digital (.p12)</CardTitle></CardHeader>
-        <CardContent>
-          <div v-if="branch?.sri_certificate_uploaded" class="flex items-center gap-2 mb-4">
-            <Badge class="bg-green-100 text-green-700">Certificado cargado</Badge>
-          </div>
-          <form @submit.prevent="submitCert" class="space-y-4">
-            <div class="space-y-2">
-              <Label>Archivo .p12</Label>
-              <Input type="file" accept=".p12,.pfx" @change="certForm.certificate = $event.target.files[0]" />
-              <p v-if="certForm.errors.certificate" class="text-sm text-red-500">{{ certForm.errors.certificate }}</p>
+          <!-- Toggle para override -->
+          <label class="flex items-center gap-2 cursor-pointer pt-2 border-t">
+            <input type="checkbox" v-model="form.sri_override" class="rounded border-gray-300" />
+            <span class="text-sm">Usar configuracion SRI diferente para esta sucursal</span>
+          </label>
+
+          <template v-if="form.sri_override">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2"><Label>RUC (si difiere)</Label><Input v-model="form.ruc" maxlength="13" /></div>
+              <div class="space-y-2"><Label>Razon social</Label><Input v-model="form.razon_social" /></div>
             </div>
             <div class="space-y-2">
-              <Label>Contrasena del certificado</Label>
-              <Input v-model="certForm.certificate_password" type="password" />
+              <Label>Ambiente</Label>
+              <select v-model="form.sri_ambiente" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                <option value="test">Pruebas</option>
+                <option value="production">Produccion</option>
+              </select>
             </div>
-            <Button type="submit" :disabled="certForm.processing" variant="outline">Subir certificado</Button>
-          </form>
+            <div class="space-y-2">
+              <Label>Regimen tributario</Label>
+              <select v-model="form.sri_regimen" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                <option value="general">Regimen General</option>
+                <option value="rimpe_emprendedor">RIMPE Emprendedor</option>
+                <option value="rimpe_negocio_popular">RIMPE Negocio Popular</option>
+              </select>
+            </div>
+            <div class="space-y-2">
+              <Label>Obligado a llevar contabilidad</Label>
+              <select v-model="form.sri_obligado_contabilidad" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                <option value="NO">NO</option>
+                <option value="SI">SI</option>
+              </select>
+            </div>
+
+            <!-- Certificado digital (solo al editar, solo con override) -->
+            <div v-if="isEditing" class="border-t pt-4 space-y-4">
+              <h4 class="text-sm font-medium">Certificado digital (.p12)</h4>
+              <div v-if="branch?.sri_certificate_uploaded" class="flex items-center gap-2">
+                <Badge class="bg-green-100 text-green-700">Certificado propio cargado</Badge>
+              </div>
+              <form @submit.prevent="submitCert" class="space-y-3">
+                <div class="space-y-2">
+                  <Label>Archivo .p12</Label>
+                  <Input type="file" accept=".p12,.pfx" @change="certForm.certificate = $event.target.files[0]" />
+                  <p v-if="certForm.errors.certificate" class="text-sm text-red-500">{{ certForm.errors.certificate }}</p>
+                </div>
+                <div class="space-y-2">
+                  <Label>Contrasena del certificado</Label>
+                  <Input v-model="certForm.certificate_password" type="password" />
+                </div>
+                <Button type="submit" :disabled="certForm.processing" variant="outline" size="sm">Subir certificado</Button>
+              </form>
+            </div>
+          </template>
         </CardContent>
       </Card>
 
