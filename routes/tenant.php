@@ -24,6 +24,7 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\SettingsController;
 use App\Http\Controllers\Tenant\ReportController;
 use App\Http\Controllers\Tenant\BranchController;
+use App\Http\Controllers\Tenant\PackageController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -204,5 +205,20 @@ Route::prefix('/salon/{tenant}')->middleware([
             ]);
         Route::post('sucursales/switch', [BranchController::class, 'switchBranch'])->name('tenant.branches.switch');
         Route::post('sucursales/{branch}/certificate', [BranchController::class, 'uploadCertificate'])->name('tenant.branches.certificate');
+
+        // Packages
+        Route::resource('paquetes', PackageController::class)
+            ->parameters(['paquetes' => 'package'])
+            ->names([
+                'index' => 'tenant.packages.index',
+                'create' => 'tenant.packages.create',
+                'store' => 'tenant.packages.store',
+                'edit' => 'tenant.packages.edit',
+                'update' => 'tenant.packages.update',
+                'destroy' => 'tenant.packages.destroy',
+            ]);
+        Route::get('packages/check-client', [PackageController::class, 'checkClientPackage'])->name('tenant.packages.check');
+        Route::post('packages/use-session', [PackageController::class, 'useSession'])->name('tenant.packages.use-session');
+        Route::get('packages/client/{clientId}', [PackageController::class, 'clientPackages'])->name('tenant.packages.client');
     });
 });

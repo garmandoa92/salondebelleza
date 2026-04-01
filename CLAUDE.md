@@ -153,6 +153,7 @@ resources/js/
 | 13 | docs/sesion-13-multisucursal.md | DONE | Multi-sucursal | Fase 3 |
 | 14 | docs/sesion-14-landing-page.md | PENDING | Landing page del SaaS | Post MVP |
 | 15 | docs/sesion-15-onboarding.md | PENDING | Onboarding guiado | Post MVP |
+| 16 | docs/sesion-16-paquetes.md | Paquetes y Bonos | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
 
 ## Modulos implementados
