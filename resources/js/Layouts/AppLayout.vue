@@ -20,6 +20,14 @@ const mobileOpen = ref(false)
 
 const user = computed(() => page.props.auth?.user)
 const tenant = computed(() => page.props.tenant)
+const branches = computed(() => page.props.branches || [])
+const currentBranchId = computed(() => page.props.currentBranchId)
+const currentBranch = computed(() => branches.value.find(b => b.id === currentBranchId.value))
+const hasBranches = computed(() => branches.value.length > 1)
+
+const switchBranch = (branchId) => {
+  router.post(`${basePath.value}/sucursales/switch`, { branch_id: branchId || null })
+}
 
 const initials = computed(() => {
   if (!user.value?.name) return '?'
@@ -174,6 +182,20 @@ onMounted(() => {
               </nav>
             </SheetContent>
           </Sheet>
+
+          <!-- Branch selector -->
+          <div v-if="hasBranches" class="ml-4">
+            <select
+              :value="currentBranchId || ''"
+              @change="switchBranch($event.target.value)"
+              class="h-8 rounded-md border border-input bg-transparent px-2 text-sm font-medium"
+            >
+              <option value="">Todas las sucursales</option>
+              <option v-for="b in branches" :key="b.id" :value="b.id">
+                {{ b.name }}{{ b.is_main ? ' (Matriz)' : '' }}
+              </option>
+            </select>
+          </div>
 
           <div class="flex-1" />
 

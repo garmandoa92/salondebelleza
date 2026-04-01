@@ -11,13 +11,17 @@ use Illuminate\Support\Collection;
 
 class AppointmentService
 {
-    public function getEventsForCalendar(string $start, string $end, ?array $stylistIds = null): array
+    public function getEventsForCalendar(string $start, string $end, ?array $stylistIds = null, ?string $branchId = null): array
     {
         $query = Appointment::with(['client:id,first_name,last_name,phone,allergies', 'stylist:id,name,color', 'service:id,name,duration_minutes,base_price'])
             ->whereBetween('starts_at', [$start, $end]);
 
         if ($stylistIds) {
             $query->whereIn('stylist_id', $stylistIds);
+        }
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
         }
 
         $statusColors = [

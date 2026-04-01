@@ -21,14 +21,15 @@ class DashboardController extends Controller
         $monthStart = Carbon::now()->startOfMonth();
         $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
+        $branchId = session('current_branch_id');
 
-        // KPIs - Today
-        $todaySales = Sale::where('status', 'completed')->whereDate('completed_at', $today);
-        $yesterdaySales = Sale::where('status', 'completed')->whereDate('completed_at', $yesterday);
+        // KPIs - Today (filtered by branch if selected)
+        $todaySales = Sale::where('status', 'completed')->whereDate('completed_at', $today)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+        $yesterdaySales = Sale::where('status', 'completed')->whereDate('completed_at', $yesterday)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
         $revenueToday = (clone $todaySales)->sum('total');
         $revenueYesterday = (clone $yesterdaySales)->sum('total');
 
-        $todayAppointments = Appointment::whereDate('starts_at', $today);
+        $todayAppointments = Appointment::whereDate('starts_at', $today)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
         $appointmentsTotal = (clone $todayAppointments)->count();
         $appointmentsCompleted = (clone $todayAppointments)->where('status', 'completed')->count();
         $appointmentsPending = (clone $todayAppointments)->whereIn('status', ['pending', 'confirmed'])->count();

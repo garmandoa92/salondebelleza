@@ -33,6 +33,9 @@ const periods = [
   { key: 'last_month', label: 'Mes anterior' },
 ]
 
+const branches = computed(() => page.props.branches || [])
+const hasBranches = computed(() => branches.value.length > 1)
+
 const changePeriod = (p) => {
   router.get(`${base}/reportes`, { period: p }, { preserveState: true })
 }
@@ -58,7 +61,13 @@ const stylistTab = ref('revenue')
   <div class="space-y-6">
     <!-- Header + Period selector -->
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold text-gray-900">Reportes</h1>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-gray-900">Reportes</h1>
+        <Badge v-if="hasBranches && page.props.currentBranchId" variant="secondary" class="text-xs">
+          {{ branches.find(b => b.id === page.props.currentBranchId)?.name || 'Sucursal' }}
+        </Badge>
+        <Badge v-else-if="hasBranches" variant="outline" class="text-xs">Todas las sucursales</Badge>
+      </div>
       <div class="flex gap-1">
         <Button
           v-for="p in periods" :key="p.key"

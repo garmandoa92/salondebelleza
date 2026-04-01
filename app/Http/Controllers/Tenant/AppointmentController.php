@@ -22,8 +22,15 @@ class AppointmentController extends Controller
 
     public function index()
     {
+        $branchId = session('current_branch_id');
+
+        $stylistQuery = Stylist::where('is_active', true)->orderBy('sort_order');
+        if ($branchId) {
+            $stylistQuery->whereHas('branches', fn ($q) => $q->where('branches.id', $branchId));
+        }
+
         return Inertia::render('Agenda/Index', [
-            'stylists' => Stylist::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'color', 'photo_path']),
+            'stylists' => $stylistQuery->get(['id', 'name', 'color', 'photo_path']),
             'categories' => ServiceCategory::with('services:id,service_category_id,name,base_price,duration_minutes')->orderBy('sort_order')->get(['id', 'name', 'color']),
         ]);
     }
@@ -40,6 +47,7 @@ class AppointmentController extends Controller
             $request->start,
             $request->end,
             $request->stylist_ids,
+            session('current_branch_id'),
         );
 
         return response()->json($events);

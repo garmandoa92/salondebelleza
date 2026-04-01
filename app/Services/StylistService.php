@@ -41,7 +41,15 @@ class StylistService
             $data['photo_path'] = $photo->store('stylists', 'public');
         }
 
+        $branchIds = $data['branch_ids'] ?? null;
+        unset($data['branch_ids']);
+
         $stylist->update($data);
+
+        if ($branchIds !== null) {
+            $stylist->branches()->sync($branchIds);
+        }
+
         return $stylist;
     }
 

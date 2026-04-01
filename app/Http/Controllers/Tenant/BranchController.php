@@ -126,6 +126,17 @@ class BranchController extends Controller
             ->with('success', 'Sucursal eliminada.');
     }
 
+    public function switchBranch(Request $request)
+    {
+        $branchId = $request->branch_id;
+        if ($branchId) {
+            Branch::findOrFail($branchId);
+        }
+        session(['current_branch_id' => $branchId]);
+
+        return back();
+    }
+
     private function canCreateBranch(): bool
     {
         $tenant = tenant();

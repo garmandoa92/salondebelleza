@@ -35,6 +35,7 @@ class StylistController extends Controller
     {
         return Inertia::render('Stylists/Form', [
             'categories' => ServiceCategory::orderBy('sort_order')->get(),
+            'branches' => \App\Models\Branch::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
         ]);
     }
 
@@ -51,9 +52,12 @@ class StylistController extends Controller
 
     public function edit(Stylist $stylist)
     {
+        $stylist->load('branches:id,name');
+
         return Inertia::render('Stylists/Form', [
             'stylist' => $stylist,
             'categories' => ServiceCategory::orderBy('sort_order')->get(),
+            'branches' => \App\Models\Branch::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
         ]);
     }
 

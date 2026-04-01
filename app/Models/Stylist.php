@@ -62,4 +62,10 @@ class Stylist extends Model
     {
         return $this->hasMany(BlockedTime::class);
     }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'branch_stylist')
+            ->withPivot('schedule', 'is_active');
+    }
 }

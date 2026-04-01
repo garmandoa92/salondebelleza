@@ -13,6 +13,7 @@ defineOptions({ layout: AppLayout })
 const props = defineProps({
   stylist: { type: Object, default: null },
   categories: Array,
+  branches: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -43,8 +44,15 @@ const form = useForm({
   specialties: props.stylist?.specialties || [],
   schedule: props.stylist?.schedule || { ...defaultSchedule },
   commission_rules: props.stylist?.commission_rules || { default: 40, by_category: {} },
+  branch_ids: props.stylist?.branches?.map(b => b.id) || [],
   photo: null,
 })
+
+const toggleBranch = (id) => {
+  const idx = form.branch_ids.indexOf(id)
+  if (idx >= 0) form.branch_ids.splice(idx, 1)
+  else form.branch_ids.push(id)
+}
 
 const submit = () => {
   if (isEditing.value) {
@@ -271,6 +279,25 @@ const removeCategoryException = (catId) => {
               >{{ cat.name }}</option>
             </select>
           </div>
+        </CardContent>
+      </Card>
+
+      <!-- Sucursales asignadas -->
+      <Card v-if="branches.length">
+        <CardHeader><CardTitle class="text-base">Sucursales asignadas</CardTitle></CardHeader>
+        <CardContent>
+          <div class="space-y-2">
+            <label
+              v-for="b in branches"
+              :key="b.id"
+              :class="['flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors',
+                form.branch_ids.includes(b.id) ? 'border-primary bg-primary/5' : 'border-gray-200 hover:bg-gray-50']"
+            >
+              <input type="checkbox" :checked="form.branch_ids.includes(b.id)" @change="toggleBranch(b.id)" class="rounded border-gray-300" />
+              <span class="text-sm font-medium">{{ b.name }}</span>
+            </label>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">Selecciona en que sucursales trabaja este estilista.</p>
         </CardContent>
       </Card>
 

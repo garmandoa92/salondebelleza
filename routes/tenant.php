@@ -202,5 +202,6 @@ Route::prefix('/salon/{tenant}')->middleware([
                 'update' => 'tenant.branches.update',
                 'destroy' => 'tenant.branches.destroy',
             ]);
+        Route::post('sucursales/switch', [BranchController::class, 'switchBranch'])->name('tenant.branches.switch');
     });
 });
