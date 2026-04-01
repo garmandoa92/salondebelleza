@@ -85,11 +85,7 @@ resources/js/
 - Soportar regímenes: RIMPE Negocio Popular, RIMPE Emprendedor, Régimen General
 
 ## Lo que NO hacer — nunca
-- No usar array_push → usar collect()
-- No queries N+1 → siempre eager loading con with()
-- No lógica en vistas Vue → en composables o Services
-- No hardcodear strings de configuración → usar config() o tenant()->settings
-- No hacer llamadas API síncronas que puedan fallar → siempre Queue con retry
+
 ### Laravel
 - No usar $guarded = [] → siempre $fillable explícito en modelos
 - No queries N+1 → siempre eager loading con with()
@@ -122,6 +118,11 @@ resources/js/
 - No asumir respuesta del SRI en menos de 30 segundos → timeout explícito
 - No perder el XML firmado → guardar en DB antes de enviar al SRI
 
+### Multitenancy
+- No acceder a modelos tenant desde contexto central sin inicializar tenancy
+- No usar config('database.default') directamente
+- No mezclar lógica de tenant con lógica central
+
 ## Índice de sesiones
 | Sesión | Archivo | Descripción | Fase |
 |--------|---------|-------------|------|
@@ -139,6 +140,9 @@ resources/js/
 | 11 | docs/sesion-11-reportes.md | Reportes y analítica | Fase 2 |
 | 12 | docs/sesion-12-fideliacard.md | Integración FideliaCard | Fase 2 |
 | 13 | docs/sesion-13-multisucursal.md | Multi-sucursal | Fase 3 |
+| 14 | docs/sesion-14-landing-page.md | Landing page del SaaS | Post MVP |
+| 15 | docs/sesion-15-onboarding.md | Onboarding guiado | Post MVP |
+| 18 | docs/sesion-18-superadmin.md | Panel de superadmin | Post MVP |
 
 <!-- MEMORY:START -->
 # salondebelleza

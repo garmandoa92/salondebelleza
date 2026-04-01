@@ -21,6 +21,7 @@ use App\Http\Controllers\Tenant\StockMovementController;
 use App\Http\Controllers\Tenant\NotificationController;
 use App\Http\Controllers\Tenant\CommissionController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\SettingsController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -165,5 +166,17 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('notifications/unread', [NotificationController::class, 'unread'])->name('tenant.notifications.unread');
         Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('tenant.notifications.read');
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('tenant.notifications.read-all');
+
+        // Settings
+        Route::get('configuracion', [SettingsController::class, 'index'])->name('tenant.settings.index');
+        Route::put('settings/salon', [SettingsController::class, 'updateSalon'])->name('tenant.settings.salon');
+        Route::put('settings/sri', [SettingsController::class, 'updateSri'])->name('tenant.settings.sri');
+        Route::post('settings/certificate', [SettingsController::class, 'uploadCertificate'])->name('tenant.settings.certificate');
+        Route::put('settings/schedule', [SettingsController::class, 'updateSchedule'])->name('tenant.settings.schedule');
+        Route::put('settings/booking', [SettingsController::class, 'updateBooking'])->name('tenant.settings.booking');
+        Route::put('settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('tenant.settings.whatsapp');
+        Route::put('settings/payments', [SettingsController::class, 'updatePayments'])->name('tenant.settings.payments');
+        Route::post('settings/invite', [SettingsController::class, 'inviteUser'])->name('tenant.settings.invite');
+        Route::patch('settings/users/{user}/toggle', [SettingsController::class, 'toggleUser'])->name('tenant.settings.toggle-user');
     });
 });
