@@ -132,7 +132,7 @@ resources/js/
 - **Checkout modal resetea estado**: al cerrar y reabrir el modal de cobro, todos los campos se resetean via `watch(props.open)`.
 
 ## Estado del proyecto
-**MVP COMPLETO (Sesiones 1-10)** — Todas las funcionalidades core implementadas y verificadas.
+**MVP + Fase 2-3 COMPLETO (Sesiones 1-11, 13)** — Todas las funcionalidades implementadas y verificadas. Sesion 12 (FideliaCard) saltada por decision del usuario.
 
 ## Índice de sesiones
 | Sesión | Archivo | Estado | Descripción | Fase |
@@ -148,9 +148,9 @@ resources/js/
 | 8 | docs/sesion-08-whatsapp.md | DONE | WhatsApp + Notificaciones | MVP |
 | 9 | docs/sesion-09-comisiones-dashboard.md | DONE | Comisiones + Dashboard | MVP |
 | 10 | docs/sesion-10-settings-billing.md | DONE | Settings + Billing Stripe | MVP |
-| 11 | docs/sesion-11-reportes.md | PENDING | Reportes y analítica | Fase 2 |
-| 12 | docs/sesion-12-fideliacard.md | PENDING | Integración FideliaCard | Fase 2 |
-| 13 | docs/sesion-13-multisucursal.md | PENDING | Multi-sucursal | Fase 3 |
+| 11 | docs/sesion-11-reportes.md | DONE | Reportes y analítica | Fase 2 |
+| 12 | docs/sesion-12-fideliacard.md | SKIPPED | Integración FideliaCard | Fase 2 |
+| 13 | docs/sesion-13-multisucursal.md | DONE | Multi-sucursal | Fase 3 |
 | 14 | docs/sesion-14-landing-page.md | PENDING | Landing page del SaaS | Post MVP |
 | 15 | docs/sesion-15-onboarding.md | PENDING | Onboarding guiado | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
@@ -170,6 +170,8 @@ resources/js/
 - **Comisiones**: calculo automatico, resumen por periodo, detalle por estilista, pago batch
 - **Dashboard**: KPIs hoy vs ayer, agenda del dia, metricas mes, alertas, accesos rapidos
 - **Settings**: 6 tabs (salon, SRI, reservas, WhatsApp, equipo, suscripcion)
+- **Reportes**: 8 secciones (KPIs, ingresos, servicios, heatmap demanda, estilistas, retencion, forecast, inventario)
+- **Multi-sucursal**: branches CRUD, branch_stylist pivot, branch_id en appointments/sales, plan validation
 
 <!-- MEMORY:START -->
 # salondebelleza
