@@ -6,7 +6,7 @@ Antes de empezar cualquier sesión, lee el archivo correspondiente con todos los
 El flujo es: leer el archivo de sesión → implementar todo lo que dice → probar → commit.
 
 ## Stack técnico
-- Backend: Laravel 11
+- Backend: Laravel 13
 - Frontend: Vue 3 + Inertia.js + Vite
 - UI: Tailwind CSS + shadcn-vue
 - Base de datos: MySQL 8 / MariaDB 10.6
@@ -63,9 +63,10 @@ resources/js/
 ## Multitenancy — CRÍTICO
 - Usamos stancl/tenancy v3 con base de datos SEPARADA por tenant
 - El tenant = el salón de belleza completo
-- Cada tenant tiene su propio subdominio: {slug}.miapp.test (local) / {slug}.miapp.ec (prod)
+- **Desarrollo**: identificación por path `/salon/{tenant}/...` en localhost:8000
+- **Producción**: se puede cambiar a subdominio `{slug}.miapp.ec`
 - El dominio central maneja: registro, login de dueños, billing
-- Los subdominios corren la app del salón con su propia DB aislada
+- Cada tenant tiene su propia DB aislada (tenant_{slug})
 - NUNCA hacer queries cross-tenant
 - Los jobs en contexto tenant DEBEN usar WithTenantContext trait
 - Modelos centrales (fuera de tenant): Tenant, Plan, TenantUser, Subscription
@@ -123,26 +124,52 @@ resources/js/
 - No usar config('database.default') directamente
 - No mezclar lógica de tenant con lógica central
 
+## Decisiones tecnicas importantes
+- **Multitenancy por path** (no subdominios): URLs son `/salon/{tenant}/...` para funcionar en localhost sin configurar DNS. En produccion se puede cambiar a subdominios.
+- **Tenant ID = slug** (no UUID): el ID del tenant es el slug (ej: "demo"), lo que genera DB names legibles como `tenant_demo`.
+- **Timezone**: APP_TIMEZONE=America/Guayaquil. Las fechas se guardan en hora Ecuador en MySQL (no UTC).
+- **FullCalendar events via axios**: no usar URL directa en events config (Inertia middleware interfiere). Usar funcion `fetchEvents` con axios.
+- **Checkout modal resetea estado**: al cerrar y reabrir el modal de cobro, todos los campos se resetean via `watch(props.open)`.
+
+## Estado del proyecto
+**MVP COMPLETO (Sesiones 1-10)** — Todas las funcionalidades core implementadas y verificadas.
+
 ## Índice de sesiones
-| Sesión | Archivo | Descripción | Fase |
-|--------|---------|-------------|------|
-| 0 | Este archivo (CLAUDE.md) | Contexto base del proyecto | - |
-| 1 | docs/sesion-01-multitenant.md | Boilerplate multitenant + Auth | MVP |
-| 2 | docs/sesion-02-modelos.md | Todos los modelos y migraciones | MVP |
-| 3 | docs/sesion-03-servicios-estilistas.md | Catálogo servicios + Estilistas | MVP |
-| 4 | docs/sesion-04-agenda.md | Agenda FullCalendar 2026 | MVP |
-| 5 | docs/sesion-05-booking-crm.md | Booking público + CRM clientes | MVP |
-| 6 | docs/sesion-06-caja-sri.md | Caja + Ventas + Facturación SRI | MVP |
-| 7 | docs/sesion-07-inventario.md | Inventario de productos | MVP |
-| 8 | docs/sesion-08-whatsapp.md | WhatsApp + Notificaciones | MVP |
-| 9 | docs/sesion-09-comisiones-dashboard.md | Comisiones + Dashboard | MVP |
-| 10 | docs/sesion-10-settings-billing.md | Settings + Billing Stripe | MVP |
-| 11 | docs/sesion-11-reportes.md | Reportes y analítica | Fase 2 |
-| 12 | docs/sesion-12-fideliacard.md | Integración FideliaCard | Fase 2 |
-| 13 | docs/sesion-13-multisucursal.md | Multi-sucursal | Fase 3 |
-| 14 | docs/sesion-14-landing-page.md | Landing page del SaaS | Post MVP |
-| 15 | docs/sesion-15-onboarding.md | Onboarding guiado | Post MVP |
-| 18 | docs/sesion-18-superadmin.md | Panel de superadmin | Post MVP |
+| Sesión | Archivo | Estado | Descripción | Fase |
+|--------|---------|--------|-------------|------|
+| 0 | Este archivo (CLAUDE.md) | - | Contexto base del proyecto | - |
+| 1 | docs/sesion-01-multitenant.md | DONE | Boilerplate multitenant + Auth | MVP |
+| 2 | docs/sesion-02-modelos.md | DONE | Todos los modelos y migraciones | MVP |
+| 3 | docs/sesion-03-servicios-estilistas.md | DONE | Catálogo servicios + Estilistas | MVP |
+| 4 | docs/sesion-04-agenda.md | DONE | Agenda FullCalendar 2026 | MVP |
+| 5 | docs/sesion-05-booking-crm.md | DONE | Booking público + CRM clientes | MVP |
+| 6 | docs/sesion-06-caja-sri.md | DONE | Caja + Ventas + Facturación SRI | MVP |
+| 7 | docs/sesion-07-inventario.md | DONE | Inventario de productos | MVP |
+| 8 | docs/sesion-08-whatsapp.md | DONE | WhatsApp + Notificaciones | MVP |
+| 9 | docs/sesion-09-comisiones-dashboard.md | DONE | Comisiones + Dashboard | MVP |
+| 10 | docs/sesion-10-settings-billing.md | DONE | Settings + Billing Stripe | MVP |
+| 11 | docs/sesion-11-reportes.md | PENDING | Reportes y analítica | Fase 2 |
+| 12 | docs/sesion-12-fideliacard.md | PENDING | Integración FideliaCard | Fase 2 |
+| 13 | docs/sesion-13-multisucursal.md | PENDING | Multi-sucursal | Fase 3 |
+| 14 | docs/sesion-14-landing-page.md | PENDING | Landing page del SaaS | Post MVP |
+| 15 | docs/sesion-15-onboarding.md | PENDING | Onboarding guiado | Post MVP |
+| 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
+
+## Modulos implementados
+- **Auth**: registro salon, login central -> redirect a tenant, login tenant con token cross-domain
+- **Servicios**: CRUD categorias + servicios, toggle activo, receta de productos
+- **Estilistas**: CRUD, horario semanal doble franja, comisiones por categoria, bloqueos
+- **Agenda**: FullCalendar resourceTimeGridDay, drag&drop, tooltips tippy.js, drawer detalle, modal 4 pasos
+- **Booking publico**: /reservar sin auth, 4 pasos, crea cliente automaticamente
+- **CRM Clientes**: tabla con busqueda/filtros, ficha completa con historial/compras/citas
+- **Caja/Ventas**: checkout modal con items, descuentos, IVA 15%, metodos de pago, vuelto
+- **Facturacion SRI**: motor completo (XML, clave acceso mod11, firma stub, SOAP, RIDE HTML), historial con drawer
+- **Inventario**: CRUD productos, compras, ajustes, movimientos, indicadores stock
+- **WhatsApp**: 360dialog API, jobs confirmacion/recordatorio/factura, normalizacion telefono Ecuador
+- **Notificaciones**: dropdown campana en topbar, polling 60s, mark read
+- **Comisiones**: calculo automatico, resumen por periodo, detalle por estilista, pago batch
+- **Dashboard**: KPIs hoy vs ayer, agenda del dia, metricas mes, alertas, accesos rapidos
+- **Settings**: 6 tabs (salon, SRI, reservas, WhatsApp, equipo, suscripcion)
 
 <!-- MEMORY:START -->
 # salondebelleza
