@@ -19,6 +19,8 @@ use App\Http\Controllers\Tenant\SriInvoiceController;
 use App\Http\Controllers\Tenant\ProductController;
 use App\Http\Controllers\Tenant\StockMovementController;
 use App\Http\Controllers\Tenant\NotificationController;
+use App\Http\Controllers\Tenant\CommissionController;
+use App\Http\Controllers\Tenant\DashboardController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -30,11 +32,8 @@ Route::prefix('/salon/{tenant}')->middleware([
         return redirect()->route('tenant.dashboard', ['tenant' => tenant('id')]);
     });
 
-    Route::get('/dashboard', function () {
-        return inertia('Tenant/Dashboard', [
-            'tenant' => tenant(),
-        ]);
-    })->middleware(['auth'])->name('tenant.dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['auth'])->name('tenant.dashboard');
 
     Route::get('/upgrade', function () {
         return inertia('Tenant/Upgrade', [
@@ -155,6 +154,11 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('stock/movements', [StockMovementController::class, 'index'])->name('tenant.stock.movements');
         Route::post('stock/purchase', [StockMovementController::class, 'purchase'])->name('tenant.stock.purchase');
         Route::post('stock/adjustment', [StockMovementController::class, 'adjustment'])->name('tenant.stock.adjustment');
+
+        // Commissions
+        Route::get('comisiones', [CommissionController::class, 'index'])->name('tenant.commissions.index');
+        Route::get('comisiones/estilista/{stylist}', [CommissionController::class, 'stylist'])->name('tenant.commissions.stylist');
+        Route::post('comisiones/pay', [CommissionController::class, 'pay'])->name('tenant.commissions.pay');
 
         // Notifications
         Route::get('notifications', [NotificationController::class, 'index'])->name('tenant.notifications.index');
