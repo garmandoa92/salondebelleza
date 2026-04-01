@@ -73,6 +73,16 @@ const statusLabels = {
   completed: 'Completada', cancelled: 'Cancelada', no_show: 'No show',
 }
 
+const fetchEvents = (info, successCallback, failureCallback) => {
+  axios.get(`${base}/agenda/events`, {
+    params: {
+      start: info.startStr,
+      end: info.endStr,
+      stylist_ids: activeStylists.value,
+    },
+  }).then(res => successCallback(res.data)).catch(failureCallback)
+}
+
 const calendarOptions = computed(() => ({
   plugins: [resourceTimeGridPlugin, dayGridPlugin, timeGridPlugin, interactionPlugin],
   schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
@@ -82,7 +92,6 @@ const calendarOptions = computed(() => ({
   editable: true,
   droppable: true,
   eventResizableFromStart: false,
-  resourceEditable: true,
   selectable: true,
   selectMirror: true,
   selectMinDistance: 5,
@@ -97,13 +106,7 @@ const calendarOptions = computed(() => ({
   timeZone: 'America/Guayaquil',
   height: 'calc(100vh - 180px)',
   resources: filteredResources.value,
-  events: {
-    url: `${base}/agenda/events`,
-    method: 'GET',
-    extraParams: () => ({
-      stylist_ids: activeStylists.value,
-    }),
-  },
+  events: fetchEvents,
   eventDrop({ event, revert }) {
     axios.put(`${base}/agenda/appointments/${event.id}`, {
       starts_at: event.startStr,
