@@ -153,7 +153,7 @@ resources/js/
 | 13 | docs/sesion-13-multisucursal.md | DONE | Multi-sucursal | Fase 3 |
 | 14 | docs/sesion-14-landing-page.md | PENDING | Landing page del SaaS | Post MVP |
 | 15 | docs/sesion-15-onboarding.md | PENDING | Onboarding guiado | Post MVP |
-| 16 | docs/sesion-16-paquetes.md | Paquetes y Bonos | Post MVP |
+| 16 | docs/sesion-16-paquetes.md | DONE | Paquetes y Bonos | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
 
 ## Modulos implementados
@@ -173,6 +173,7 @@ resources/js/
 - **Settings**: 6 tabs (salon, SRI, reservas, WhatsApp, equipo, suscripcion)
 - **Reportes**: 8 secciones (KPIs, ingresos, servicios, heatmap demanda, estilistas, retencion, forecast, inventario)
 - **Multi-sucursal**: branches CRUD, branch_stylist pivot, branch_id en appointments/sales, plan validation
+- **Paquetes y Bonos**: Package (sessions/combo), ClientPackage, venta en checkout, descuento al completar cita
 
 <!-- MEMORY:START -->
 # salondebelleza
