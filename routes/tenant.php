@@ -23,6 +23,7 @@ use App\Http\Controllers\Tenant\CommissionController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\SettingsController;
 use App\Http\Controllers\Tenant\ReportController;
+use App\Http\Controllers\Tenant\BranchController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -189,5 +190,17 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('reportes/demand', [ReportController::class, 'demand'])->name('tenant.reports.demand');
         Route::get('reportes/inventory', [ReportController::class, 'inventory'])->name('tenant.reports.inventory');
         Route::get('reportes/forecast', [ReportController::class, 'forecast'])->name('tenant.reports.forecast');
+
+        // Branches (multi-sucursal)
+        Route::resource('sucursales', BranchController::class)
+            ->parameters(['sucursales' => 'branch'])
+            ->names([
+                'index' => 'tenant.branches.index',
+                'create' => 'tenant.branches.create',
+                'store' => 'tenant.branches.store',
+                'edit' => 'tenant.branches.edit',
+                'update' => 'tenant.branches.update',
+                'destroy' => 'tenant.branches.destroy',
+            ]);
     });
 });
