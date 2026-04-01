@@ -111,6 +111,10 @@ class AppointmentController extends Controller
 
         $this->appointmentService->update($appointment, array_filter($data, fn ($v) => $v !== null));
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return back()->with('success', 'Cita actualizada.');
     }
 

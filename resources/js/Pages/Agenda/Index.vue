@@ -112,7 +112,7 @@ const calendarOptions = computed(() => ({
       starts_at: event.startStr,
       ends_at: event.endStr,
       stylist_id: event.getResources()[0]?.id,
-    }).catch(() => revert())
+    }, { headers: { Accept: 'application/json' } }).catch(() => revert())
   },
   eventResize({ event, revert }) {
     const minDuration = event.extendedProps.service_duration
@@ -124,7 +124,7 @@ const calendarOptions = computed(() => ({
     axios.put(`${base}/agenda/appointments/${event.id}`, {
       starts_at: event.startStr,
       ends_at: event.endStr,
-    }).catch(() => revert())
+    }, { headers: { Accept: 'application/json' } }).catch(() => revert())
   },
   eventAllow(dropInfo, draggedEvent) {
     const api = calendarRef.value?.getApi()
