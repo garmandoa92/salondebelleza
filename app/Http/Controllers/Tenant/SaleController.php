@@ -58,7 +58,7 @@ class SaleController extends Controller
             'appointment_id' => ['nullable', 'uuid'],
             'client_id' => ['nullable', 'uuid'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.type' => ['required', 'in:service,product'],
+            'items.*.type' => ['required', 'in:service,product,package'],
             'items.*.reference_id' => ['required', 'uuid'],
             'items.*.name' => ['required', 'string'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0.01'],
