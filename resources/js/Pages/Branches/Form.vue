@@ -37,6 +37,8 @@ const form = useForm({
   address: props.branch?.address || '',
   phone: props.branch?.phone || '',
   email: props.branch?.email || '',
+  ruc: props.branch?.ruc || '',
+  razon_social: props.branch?.razon_social || '',
   manager_user_id: props.branch?.manager_user_id || '',
   schedule: props.branch?.schedule || { ...defaultSchedule },
   sri_establishment: props.branch?.sri_establishment || '001',
@@ -82,6 +84,10 @@ const toggleStylist = (id) => {
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-2"><Label>Telefono</Label><Input v-model="form.phone" /></div>
             <div class="space-y-2"><Label>Email</Label><Input v-model="form.email" type="email" /></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2"><Label>RUC (13 digitos)</Label><Input v-model="form.ruc" maxlength="13" placeholder="Si difiere del salon principal" /></div>
+            <div class="space-y-2"><Label>Razon social</Label><Input v-model="form.razon_social" placeholder="Si difiere del salon principal" /></div>
           </div>
           <div class="space-y-2">
             <Label>Gerente</Label>

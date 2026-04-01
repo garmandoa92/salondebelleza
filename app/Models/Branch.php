@@ -16,6 +16,8 @@ class Branch extends Model
         'address',
         'phone',
         'email',
+        'ruc',
+        'razon_social',
         'manager_user_id',
         'schedule',
         'settings',

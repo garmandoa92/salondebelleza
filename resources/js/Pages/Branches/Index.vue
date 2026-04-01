@@ -62,6 +62,10 @@ const deleteBranch = (b) => {
             <span class="text-gray-500">Gerente:</span> {{ b.manager.name }}
           </div>
 
+          <div v-if="b.ruc" class="text-sm text-gray-500">
+            RUC: {{ b.ruc }} <span v-if="b.razon_social">· {{ b.razon_social }}</span>
+          </div>
+
           <div class="grid grid-cols-2 gap-3 pt-2 border-t text-center text-sm">
             <div>
               <p class="font-semibold">{{ b.stylists_count || 0 }}</p>
