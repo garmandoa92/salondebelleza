@@ -10,7 +10,7 @@ const props = defineProps({
   appointmentId: String,
   open: Boolean,
 })
-const emit = defineEmits(['close', 'updated'])
+const emit = defineEmits(['close', 'updated', 'checkout'])
 
 const page = usePage()
 const tenantId = page.props.tenant?.id
@@ -45,6 +45,27 @@ const doAction = async (action) => {
   const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}`)
   apt.value = data
   emit('updated')
+}
+
+const openCheckout = () => {
+  // Emit checkout event with appointment data so parent can open Checkout modal
+  emit('checkout', {
+    appointmentId: apt.value.id,
+    clientId: apt.value.client_id,
+    clientName: apt.value.client ? `${apt.value.client.first_name} ${apt.value.client.last_name}` : null,
+    preItems: [{
+      type: 'service',
+      reference_id: apt.value.service?.id,
+      name: apt.value.service?.name,
+      quantity: 1,
+      unit_price: Number(apt.value.service?.base_price || 0),
+      subtotal: Number(apt.value.service?.base_price || 0),
+      iva_amount: 0,
+      discount_amount: 0,
+      stylist_id: apt.value.stylist_id,
+    }],
+  })
+  emit('close')
 }
 
 const doCancel = async () => {
@@ -131,7 +152,7 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
             <p class="text-gray-700">{{ apt.notes }}</p>
           </div>
           <div v-if="apt.internal_notes" class="text-sm">
-            <p class="text-gray-500 text-xs mb-1">Notas internas 🔒</p>
+            <p class="text-gray-500 text-xs mb-1">Notas internas</p>
             <p class="text-gray-700">{{ apt.internal_notes }}</p>
           </div>
 
@@ -157,7 +178,7 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
             </template>
 
             <template v-else-if="status === 'in_progress'">
-              <Button class="w-full bg-green-600 hover:bg-green-700" @click="doAction('complete')">Completar y cobrar →</Button>
+              <Button class="w-full bg-green-600 hover:bg-green-700" @click="openCheckout">Completar y cobrar →</Button>
               <Button variant="outline" class="w-full text-red-600 border-red-300" @click="showCancel = true">Cancelar</Button>
             </template>
 

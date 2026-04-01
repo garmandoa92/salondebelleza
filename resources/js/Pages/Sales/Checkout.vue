@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import axios from 'axios'
 
 const props = defineProps({
   open: Boolean,
   appointmentId: { type: String, default: null },
   clientId: { type: String, default: null },
+  clientName: { type: String, default: null },
   preItems: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['close', 'completed'])
@@ -33,6 +35,47 @@ const saving = ref(false)
 const completed = ref(false)
 const completedSaleId = ref(null)
 
+// Client selection (only when NOT from appointment)
+const selectedClientId = ref(null)
+const selectedClientName = ref(null)
+const clientSearch = ref('')
+const clientResults = ref([])
+const showNewClient = ref(false)
+const newClient = ref({ first_name: '', last_name: '', phone: '' })
+let searchTimer = null
+
+const isFromAppointment = computed(() => !!props.appointmentId)
+const effectiveClientId = computed(() => isFromAppointment.value ? props.clientId : selectedClientId.value)
+
+watch(clientSearch, (val) => {
+  clearTimeout(searchTimer)
+  if (val.length < 2) { clientResults.value = []; return }
+  searchTimer = setTimeout(async () => {
+    const { data } = await axios.get(`${base}/agenda/search-clients`, { params: { q: val } })
+    clientResults.value = data
+  }, 300)
+})
+
+const selectClient = (c) => {
+  selectedClientId.value = c.id
+  selectedClientName.value = `${c.first_name} ${c.last_name}`
+  clientSearch.value = ''
+  clientResults.value = []
+}
+
+const createQuickClient = async () => {
+  const { data } = await axios.post(`${base}/agenda/store-client`, { ...newClient.value, source: 'walk_in' })
+  selectedClientId.value = data.id
+  selectedClientName.value = `${data.first_name} ${data.last_name}`
+  showNewClient.value = false
+  newClient.value = { first_name: '', last_name: '', phone: '' }
+}
+
+const skipClient = () => {
+  selectedClientId.value = null
+  selectedClientName.value = 'Sin cliente'
+}
+
 watch(() => props.open, (val) => {
   if (val) {
     completed.value = false
@@ -43,6 +86,11 @@ watch(() => props.open, (val) => {
     payments.value = [{ method: 'cash', amount: 0, received: 0 }]
     invoiceRequired.value = false
     invoiceData.value = { buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '' }
+    selectedClientId.value = props.clientId || null
+    selectedClientName.value = props.clientName || null
+    clientSearch.value = ''
+    clientResults.value = []
+    showNewClient.value = false
   }
 })
 
@@ -52,10 +100,7 @@ onMounted(async () => {
   products.value = data.products
   packages.value = data.packages || []
   stylists.value = data.stylists
-
-  if (props.preItems.length) {
-    items.value = props.preItems.map(i => ({ ...i }))
-  }
+  if (props.preItems.length) items.value = props.preItems.map(i => ({ ...i }))
 })
 
 const subtotal = computed(() => items.value.reduce((sum, i) => sum + Number(i.subtotal || 0), 0))
@@ -123,8 +168,8 @@ const submit = async () => {
   saving.value = true
   try {
     const { data } = await axios.post(`${base}/ventas`, {
-      appointment_id: props.appointmentId,
-      client_id: props.clientId,
+      appointment_id: props.appointmentId || null,
+      client_id: effectiveClientId.value || null,
       items: items.value.map(i => ({
         ...i,
         iva_amount: Math.round(Number(i.subtotal) * 0.15 * 100) / 100,
@@ -142,7 +187,6 @@ const submit = async () => {
 
     completedSaleId.value = data.sale_id
 
-    // Generate invoice if requested
     if (invoiceRequired.value) {
       await axios.post(`${base}/ventas/${data.sale_id}/invoice`, invoiceData.value)
     }
@@ -153,6 +197,8 @@ const submit = async () => {
 }
 
 const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit: 'T. Debito', card_credit: 'T. Credito', other: 'Otro' }
+
+const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?'
 </script>
 
 <template>
@@ -179,15 +225,64 @@ const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit:
             <button @click="emit('close')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
           </div>
 
+          <!-- Client header (from appointment) -->
+          <div v-if="isFromAppointment && clientName" class="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
+            <Avatar class="h-9 w-9"><AvatarFallback class="text-xs">{{ initials(clientName) }}</AvatarFallback></Avatar>
+            <div>
+              <p class="font-medium text-sm">{{ clientName }}</p>
+              <p class="text-xs text-blue-600">Cobro desde cita</p>
+            </div>
+          </div>
+
+          <!-- Client selector (NOT from appointment) -->
+          <Card v-if="!isFromAppointment">
+            <CardHeader class="pb-2"><CardTitle class="text-sm">Cliente</CardTitle></CardHeader>
+            <CardContent class="space-y-3">
+              <div v-if="selectedClientName" class="flex items-center justify-between bg-blue-50 rounded-lg p-3">
+                <div class="flex items-center gap-2">
+                  <Avatar class="h-8 w-8"><AvatarFallback class="text-xs">{{ initials(selectedClientName) }}</AvatarFallback></Avatar>
+                  <span class="text-sm font-medium">{{ selectedClientName }}</span>
+                </div>
+                <Button variant="ghost" size="sm" class="text-xs" @click="selectedClientId = null; selectedClientName = null">Cambiar</Button>
+              </div>
+
+              <template v-else>
+                <Input v-model="clientSearch" placeholder="Buscar cliente por nombre o telefono..." />
+                <div v-if="clientResults.length" class="border rounded-md max-h-40 overflow-y-auto">
+                  <button v-for="c in clientResults" :key="c.id" @click="selectClient(c)"
+                    class="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0 text-sm">
+                    <span class="font-medium">{{ c.first_name }} {{ c.last_name }}</span>
+                    <span class="text-gray-500 ml-2">{{ c.phone }}</span>
+                  </button>
+                </div>
+
+                <div class="flex gap-2">
+                  <Button variant="outline" size="sm" class="text-xs" @click="skipClient">Sin cliente</Button>
+                  <Button variant="outline" size="sm" class="text-xs" @click="showNewClient = !showNewClient">
+                    {{ showNewClient ? 'Cancelar' : '+ Nuevo cliente' }}
+                  </Button>
+                </div>
+
+                <div v-if="showNewClient" class="border rounded-lg p-3 space-y-2">
+                  <div class="grid grid-cols-2 gap-2">
+                    <Input v-model="newClient.first_name" placeholder="Nombre" />
+                    <Input v-model="newClient.last_name" placeholder="Apellido" />
+                  </div>
+                  <Input v-model="newClient.phone" placeholder="Telefono (09...)" />
+                  <Button size="sm" @click="createQuickClient" :disabled="!newClient.first_name || !newClient.phone">Crear y seleccionar</Button>
+                </div>
+              </template>
+            </CardContent>
+          </Card>
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left: Items -->
             <div class="lg:col-span-2 space-y-4">
-              <!-- Items table -->
               <Card>
                 <CardHeader class="pb-2">
                   <div class="flex items-center justify-between">
                     <CardTitle class="text-sm">Items</CardTitle>
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 flex-wrap">
                       <select class="text-xs border rounded px-2 py-1" @change="e => { const s = services.find(x => x.id === e.target.value); if(s) addItem('service', s); e.target.value='' }">
                         <option value="">+ Servicio</option>
                         <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }} - ${{ Number(s.base_price).toFixed(2) }}</option>

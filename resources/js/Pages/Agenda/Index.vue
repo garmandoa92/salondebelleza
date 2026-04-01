@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import AppointmentDrawer from './AppointmentDrawer.vue'
 import AppointmentModal from './AppointmentModal.vue'
+import Checkout from '../Sales/Checkout.vue'
 import WeekOccupancyBar from './WeekOccupancyBar.vue'
 import KeyboardHelpModal from './KeyboardHelpModal.vue'
 import axios from 'axios'
@@ -242,6 +243,20 @@ const onAppointmentCreated = () => {
   calendarRef.value?.getApi()?.refetchEvents()
 }
 
+// Checkout from drawer
+const showCheckout = ref(false)
+const checkoutData = ref({ appointmentId: null, clientId: null, clientName: null, preItems: [] })
+
+const onCheckout = (data) => {
+  checkoutData.value = data
+  showCheckout.value = true
+}
+
+const onCheckoutCompleted = () => {
+  showCheckout.value = false
+  calendarRef.value?.getApi()?.refetchEvents()
+}
+
 const openNewAppointment = () => {
   modalPrefill.value = {}
   showModal.value = true
@@ -355,6 +370,18 @@ onUnmounted(() => {
     :appointmentId="drawerAppointmentId"
     @close="showDrawer = false"
     @updated="onAppointmentUpdated"
+    @checkout="onCheckout"
+  />
+
+  <!-- Checkout from appointment -->
+  <Checkout
+    :open="showCheckout"
+    :appointmentId="checkoutData.appointmentId"
+    :clientId="checkoutData.clientId"
+    :clientName="checkoutData.clientName"
+    :preItems="checkoutData.preItems"
+    @close="showCheckout = false"
+    @completed="onCheckoutCompleted"
   />
 
   <!-- Modal -->
