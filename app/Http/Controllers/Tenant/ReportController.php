@@ -30,8 +30,14 @@ class ReportController extends Controller
         };
     }
 
+    private function applyBranch(): void
+    {
+        $this->reportService->setBranch(session('current_branch_id'));
+    }
+
     public function index(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
 
         return Inertia::render('Reports/Index', [
@@ -48,42 +54,49 @@ class ReportController extends Controller
 
     public function revenue(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getRevenueReport($from, $to));
     }
 
     public function services(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getServicesReport($from, $to));
     }
 
     public function stylists(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getStylistsReport($from, $to));
     }
 
     public function clients(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getClientsReport($from, $to));
     }
 
     public function demand(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getDemandReport($from, $to));
     }
 
     public function inventory(Request $request)
     {
+        $this->applyBranch();
         [$from, $to] = $this->getPeriod($request);
         return response()->json($this->reportService->getInventoryReport($from, $to));
     }
 
     public function forecast()
     {
+        $this->applyBranch();
         return response()->json($this->reportService->getForecast());
     }
 }

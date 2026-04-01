@@ -78,6 +78,7 @@ class AppointmentController extends Controller
         $data['status'] = 'confirmed';
         $data['confirmed_at'] = now();
         $data['source'] = $data['source'] ?? 'manual';
+        $data['branch_id'] = session('current_branch_id');
 
         $appointment = $this->appointmentService->store($data);
 

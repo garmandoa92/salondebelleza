@@ -35,6 +35,7 @@ class SettingsController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
             'ruc' => ['nullable', 'string', 'size:13'],
             'razon_social' => ['nullable', 'string', 'max:255'],
+            'inventory_mode' => ['nullable', 'in:centralized,per_branch'],
         ]);
 
         $tenant = tenant();
@@ -45,6 +46,12 @@ class SettingsController extends Controller
             'ruc' => $data['ruc'],
             'razon_social' => $data['razon_social'],
         ]);
+
+        if (isset($data['inventory_mode'])) {
+            $settings = $tenant->settings ?? [];
+            $settings['inventory_mode'] = $data['inventory_mode'];
+            $tenant->update(['settings' => $settings]);
+        }
 
         return back()->with('success', 'Datos del salon actualizados.');
     }

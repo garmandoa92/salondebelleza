@@ -11,9 +11,38 @@ use App\Models\StockMovement;
 use App\Models\Stylist;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReportService
 {
+    private function branchSales(string $status = 'completed'): Builder
+    {
+        return Sale::where('status', $status)
+            ->when($this->branchId, fn ($q) => $q->where('branch_id', $this->branchId));
+    }
+
+    private function branchAppointments(): Builder
+    {
+        return Appointment::query()
+            ->when($this->branchId, fn ($q) => $q->where('branch_id', $this->branchId));
+    }
+
+    private function branchSaleItems(string $type): Builder
+    {
+        $bid = $this->branchId;
+        return SaleItem::where('type', $type)
+            ->whereHas('sale', fn ($q) => $q->where('status', 'completed')
+                ->when($bid, fn ($q2) => $q2->where('branch_id', $bid)));
+    }
+
+    private ?string $branchId = null;
+
+    public function setBranch(?string $branchId): static
+    {
+        $this->branchId = $branchId;
+        return $this;
+    }
+
     public function getRevenueReport(string $from, string $to): array
     {
         $start = Carbon::parse($from)->startOfDay();
@@ -22,8 +51,8 @@ class ReportService
         $prevStart = $start->copy()->subDays($days);
         $prevEnd = $start->copy()->subDay()->endOfDay();
 
-        $sales = Sale::where('status', 'completed')->whereBetween('completed_at', [$start, $end]);
-        $prevSales = Sale::where('status', 'completed')->whereBetween('completed_at', [$prevStart, $prevEnd]);
+        $sales = $this->branchSales()->whereBetween('completed_at', [$start, $end]);
+        $prevSales = $this->branchSales()->whereBetween('completed_at', [$prevStart, $prevEnd]);
 
         $total = (clone $sales)->sum('total');
         $prevTotal = (clone $prevSales)->sum('total');
@@ -33,8 +62,7 @@ class ReportService
         // Daily breakdown
         $daily = [];
         foreach (CarbonPeriod::create($start, $end) as $day) {
-            $dayTotal = Sale::where('status', 'completed')
-                ->whereDate('completed_at', $day)->sum('total');
+            $dayTotal = $this->branchSales()->whereDate('completed_at', $day)->sum('total');
             $daily[] = ['date' => $day->format('Y-m-d'), 'label' => $day->format('d M'), 'total' => round((float) $dayTotal, 2)];
         }
 
@@ -49,11 +77,11 @@ class ReportService
         }
 
         // By type
-        $serviceRevenue = SaleItem::where('type', 'service')
-            ->whereHas('sale', fn ($q) => $q->where('status', 'completed')->whereBetween('completed_at', [$start, $end]))
+        $serviceRevenue = $this->branchSaleItems('service')
+            ->whereHas('sale', fn ($q) => $q->whereBetween('completed_at', [$start, $end]))
             ->sum('subtotal');
-        $productRevenue = SaleItem::where('type', 'product')
-            ->whereHas('sale', fn ($q) => $q->where('status', 'completed')->whereBetween('completed_at', [$start, $end]))
+        $productRevenue = $this->branchSaleItems('product')
+            ->whereHas('sale', fn ($q) => $q->whereBetween('completed_at', [$start, $end]))
             ->sum('subtotal');
 
         return [
@@ -74,17 +102,18 @@ class ReportService
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
 
-        $items = SaleItem::where('type', 'service')
-            ->whereHas('sale', fn ($q) => $q->where('status', 'completed')->whereBetween('completed_at', [$start, $end]))
+        $items = $this->branchSaleItems('service')
+            ->whereHas('sale', fn ($q) => $q->whereBetween('completed_at', [$start, $end]))
             ->selectRaw('name, COUNT(*) as count, SUM(subtotal) as total_revenue')
             ->groupBy('name')
             ->orderByDesc('count')
             ->limit(10)
             ->get();
 
-        $appointments = Appointment::whereBetween('starts_at', [$start, $end]);
-        $noShowRate = (clone $appointments)->count() > 0
-            ? round((clone $appointments)->where('status', 'no_show')->count() / (clone $appointments)->count() * 100, 1)
+        $appointments = $this->branchAppointments()->whereBetween('starts_at', [$start, $end]);
+        $totalApts = (clone $appointments)->count();
+        $noShowRate = $totalApts > 0
+            ? round((clone $appointments)->where('status', 'no_show')->count() / $totalApts * 100, 1)
             : 0;
 
         return [
@@ -101,18 +130,24 @@ class ReportService
     {
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
+        $bid = $this->branchId;
 
-        $stylists = Stylist::where('is_active', true)->get();
+        $stylists = Stylist::where('is_active', true)
+            ->when($bid, fn ($q) => $q->whereHas('branches', fn ($q2) => $q2->where('branches.id', $bid)))
+            ->get();
 
-        return $stylists->map(function (Stylist $s) use ($start, $end) {
+        return $stylists->map(function (Stylist $s) use ($start, $end, $bid) {
             $appointments = Appointment::where('stylist_id', $s->id)
+                ->when($bid, fn ($q) => $q->where('branch_id', $bid))
                 ->whereBetween('starts_at', [$start, $end]);
 
             $completed = (clone $appointments)->where('status', 'completed')->count();
             $total = (clone $appointments)->count();
 
             $revenue = SaleItem::where('stylist_id', $s->id)
-                ->whereHas('sale', fn ($q) => $q->where('status', 'completed')->whereBetween('completed_at', [$start, $end]))
+                ->whereHas('sale', fn ($q) => $q->where('status', 'completed')
+                    ->when($bid, fn ($q2) => $q2->where('branch_id', $bid))
+                    ->whereBetween('completed_at', [$start, $end]))
                 ->sum('subtotal');
 
             $completionRate = $total > 0 ? round($completed / $total * 100, 1) : 0;
@@ -137,7 +172,8 @@ class ReportService
 
         $newClients = Client::whereBetween('created_at', [$start, $end])->count();
 
-        $clientsWithAppointments = Appointment::whereBetween('starts_at', [$start, $end])
+        $clientsWithAppointments = $this->branchAppointments()
+            ->whereBetween('starts_at', [$start, $end])
             ->where('status', 'completed')
             ->distinct('client_id')
             ->count('client_id');
@@ -148,19 +184,16 @@ class ReportService
 
         $atRiskClients = Client::where('is_active', true)
             ->whereBetween('last_visit_at', [now()->subDays(89), now()->subDays(45)])
-            ->with('preferredStylist:id,name')
             ->limit(20)
-            ->get(['id', 'first_name', 'last_name', 'phone', 'last_visit_at', 'total_spent', 'visit_count', 'preferred_stylist_id']);
+            ->get(['id', 'first_name', 'last_name', 'phone', 'last_visit_at', 'total_spent', 'visit_count']);
 
-        // Source breakdown for new clients
         $bySource = Client::whereBetween('created_at', [$start, $end])
             ->selectRaw("source, COUNT(*) as count")
             ->groupBy('source')
             ->pluck('count', 'source')
             ->toArray();
 
-        // Top clients by spend
-        $topClients = Sale::where('status', 'completed')
+        $topClients = $this->branchSales()
             ->whereBetween('completed_at', [$start, $end])
             ->whereNotNull('client_id')
             ->selectRaw('client_id, SUM(total) as total_spent, COUNT(*) as visit_count')
@@ -198,11 +231,11 @@ class ReportService
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
 
-        $appointments = Appointment::whereBetween('starts_at', [$start, $end])
+        $appointments = $this->branchAppointments()
+            ->whereBetween('starts_at', [$start, $end])
             ->whereNotIn('status', ['cancelled'])
             ->get(['starts_at']);
 
-        // Build heatmap: day_of_week x hour
         $heatmap = [];
         $days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
         for ($h = 7; $h <= 21; $h++) {
@@ -214,14 +247,13 @@ class ReportService
         }
 
         foreach ($appointments as $apt) {
-            $dow = $apt->starts_at->dayOfWeekIso - 1; // 0=Mon
+            $dow = $apt->starts_at->dayOfWeekIso - 1;
             $hour = $apt->starts_at->hour;
             if ($hour >= 7 && $hour <= 21 && $dow >= 0 && $dow < 7) {
                 $heatmap[$hour - 7][$days[$dow]]++;
             }
         }
 
-        // Find peak hours
         $maxCount = 0;
         $peakHour = '';
         $peakDay = '';
@@ -246,8 +278,10 @@ class ReportService
     {
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
+        $bid = $this->branchId;
 
         $consumed = StockMovement::where('type', 'consumption')
+            ->when($bid, fn ($q) => $q->where('branch_id', $bid))
             ->whereBetween('created_at', [$start, $end])
             ->with('product:id,name,unit')
             ->selectRaw('product_id, SUM(ABS(quantity)) as total_consumed')
@@ -256,8 +290,8 @@ class ReportService
             ->limit(10)
             ->get();
 
-        $sold = SaleItem::where('type', 'product')
-            ->whereHas('sale', fn ($q) => $q->where('status', 'completed')->whereBetween('completed_at', [$start, $end]))
+        $sold = $this->branchSaleItems('product')
+            ->whereHas('sale', fn ($q) => $q->whereBetween('completed_at', [$start, $end]))
             ->selectRaw('name, SUM(quantity) as total_sold, SUM(subtotal) as total_revenue')
             ->groupBy('name')
             ->orderByDesc('total_sold')
@@ -265,11 +299,13 @@ class ReportService
             ->get();
 
         $noMovement = Product::where('is_active', true)
-            ->whereDoesntHave('stockMovements', fn ($q) => $q->whereBetween('created_at', [$start, $end]))
+            ->whereDoesntHave('stockMovements', fn ($q) => $q->whereBetween('created_at', [$start, $end])
+                ->when($bid, fn ($q2) => $q2->where('branch_id', $bid)))
             ->count();
 
-        $totalRevenue = Sale::where('status', 'completed')->whereBetween('completed_at', [$start, $end])->sum('total');
+        $totalRevenue = $this->branchSales()->whereBetween('completed_at', [$start, $end])->sum('total');
         $materialCost = StockMovement::where('type', 'consumption')
+            ->when($bid, fn ($q) => $q->where('branch_id', $bid))
             ->whereBetween('created_at', [$start, $end])
             ->whereNotNull('unit_cost')
             ->selectRaw('SUM(ABS(quantity) * unit_cost) as total_cost')
@@ -294,27 +330,34 @@ class ReportService
 
     public function getForecast(): array
     {
+        $bid = $this->branchId;
         $days = [];
         for ($i = 0; $i < 7; $i++) {
             $date = now()->addDays($i);
             $confirmed = Appointment::whereDate('starts_at', $date)
+                ->when($bid, fn ($q) => $q->where('branch_id', $bid))
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->count();
             $estimatedRevenue = Appointment::whereDate('starts_at', $date)
+                ->when($bid, fn ($q) => $q->where('branch_id', $bid))
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->with('service:id,base_price')
                 ->get()
                 ->sum(fn ($a) => (float) ($a->service?->base_price ?? 0));
 
-            // Historical average for this day of week
             $dow = $date->dayOfWeek;
             $historicalAvg = Appointment::where('status', 'completed')
+                ->when($bid, fn ($q) => $q->where('branch_id', $bid))
                 ->whereRaw("DAYOFWEEK(starts_at) = ?", [$dow + 1])
                 ->where('starts_at', '>=', now()->subDays(90))
-                ->count() / 13; // ~13 weeks
+                ->count() / 13;
 
-            $activeStylists = Stylist::where('is_active', true)->count();
-            $maxSlots = $activeStylists * 18; // ~18 slots per stylist per day
+            $stylistQuery = Stylist::where('is_active', true);
+            if ($bid) {
+                $stylistQuery->whereHas('branches', fn ($q) => $q->where('branches.id', $bid));
+            }
+            $activeStylists = $stylistQuery->count();
+            $maxSlots = $activeStylists * 18;
             $occupancy = $maxSlots > 0 ? min(100, round($confirmed / $maxSlots * 100)) : 0;
 
             $days[] = [

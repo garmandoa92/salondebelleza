@@ -31,6 +31,7 @@ const salonForm = useForm({
   address: props.tenant?.address || '',
   ruc: props.tenant?.ruc || '',
   razon_social: props.tenant?.razon_social || '',
+  inventory_mode: props.settings?.inventory_mode || 'centralized',
 })
 
 // SRI form
@@ -115,6 +116,14 @@ const tabs = [
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-2"><Label>RUC (13 digitos)</Label><Input v-model="salonForm.ruc" maxlength="13" /></div>
             <div class="space-y-2"><Label>Razon social</Label><Input v-model="salonForm.razon_social" /></div>
+          </div>
+          <div class="space-y-2 pt-4 border-t">
+            <Label>Modo de inventario (multi-sucursal)</Label>
+            <select v-model="salonForm.inventory_mode" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+              <option value="centralized">Centralizado (un solo inventario, compartido entre sucursales)</option>
+              <option value="per_branch">Por sucursal (cada sucursal con inventario independiente)</option>
+            </select>
+            <p class="text-xs text-gray-400">Define si el stock de productos es compartido o independiente por sucursal.</p>
           </div>
           <Button type="submit" :disabled="salonForm.processing">Guardar</Button>
         </form>

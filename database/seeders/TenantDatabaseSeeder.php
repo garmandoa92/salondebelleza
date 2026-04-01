@@ -11,7 +11,7 @@ class TenantDatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create Spatie roles
-        $roles = ['owner', 'admin', 'receptionist', 'stylist'];
+        $roles = ['owner', 'admin', 'receptionist', 'stylist', 'branch_manager', 'branch_receptionist'];
         foreach ($roles as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }

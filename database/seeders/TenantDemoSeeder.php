@@ -18,7 +18,7 @@ class TenantDemoSeeder extends Seeder
     public function run(): void
     {
         // Ensure roles exist
-        foreach (['owner', 'admin', 'receptionist', 'stylist'] as $roleName) {
+        foreach (['owner', 'admin', 'receptionist', 'stylist', 'branch_manager', 'branch_receptionist'] as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
 

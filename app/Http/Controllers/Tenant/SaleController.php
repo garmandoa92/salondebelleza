@@ -33,6 +33,11 @@ class SaleController extends Controller
             $query->whereDate('completed_at', '<=', $request->date_to);
         }
 
+        $branchId = session('current_branch_id');
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
         return Inertia::render('Sales/Index', [
             'sales' => $query->paginate(25),
             'summary' => $this->saleService->getDaySummary(),
@@ -75,6 +80,7 @@ class SaleController extends Controller
             'payment_methods.*.amount' => ['required', 'numeric', 'min:0'],
         ]);
 
+        $data['branch_id'] = session('current_branch_id');
         $sale = $this->saleService->createFromCheckout($data, auth()->id());
 
         return response()->json(['success' => true, 'sale_id' => $sale->id]);
