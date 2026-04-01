@@ -11,6 +11,7 @@ use App\Http\Controllers\Tenant\ServiceController;
 use App\Http\Controllers\Tenant\ServiceCategoryController;
 use App\Http\Controllers\Tenant\StylistController;
 use App\Http\Controllers\Tenant\BlockedTimeController;
+use App\Http\Controllers\Tenant\AppointmentController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -77,5 +78,21 @@ Route::prefix('/salon/{tenant}')->middleware([
         // Blocked Times
         Route::post('bloqueos', [BlockedTimeController::class, 'store'])->name('tenant.blocked-times.store');
         Route::delete('bloqueos/{blockedTime}', [BlockedTimeController::class, 'destroy'])->name('tenant.blocked-times.destroy');
+
+        // Agenda / Appointments
+        Route::get('agenda', [AppointmentController::class, 'index'])->name('tenant.agenda.index');
+        Route::get('agenda/events', [AppointmentController::class, 'events'])->name('tenant.agenda.events');
+        Route::get('agenda/occupancy', [AppointmentController::class, 'occupancy'])->name('tenant.agenda.occupancy');
+        Route::get('agenda/availability', [AppointmentController::class, 'availability'])->name('tenant.agenda.availability');
+        Route::get('agenda/search-clients', [AppointmentController::class, 'searchClients'])->name('tenant.agenda.search-clients');
+        Route::post('agenda/store-client', [AppointmentController::class, 'storeClient'])->name('tenant.agenda.store-client');
+        Route::post('agenda/appointments', [AppointmentController::class, 'store'])->name('tenant.appointments.store');
+        Route::get('agenda/appointments/{appointment}', [AppointmentController::class, 'show'])->name('tenant.appointments.show');
+        Route::put('agenda/appointments/{appointment}', [AppointmentController::class, 'update'])->name('tenant.appointments.update');
+        Route::delete('agenda/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('tenant.appointments.destroy');
+        Route::post('agenda/appointments/{appointment}/confirm', [AppointmentController::class, 'confirm'])->name('tenant.appointments.confirm');
+        Route::post('agenda/appointments/{appointment}/start', [AppointmentController::class, 'start'])->name('tenant.appointments.start');
+        Route::post('agenda/appointments/{appointment}/complete', [AppointmentController::class, 'complete'])->name('tenant.appointments.complete');
+        Route::post('agenda/appointments/{appointment}/no-show', [AppointmentController::class, 'noShow'])->name('tenant.appointments.no-show');
     });
 });
