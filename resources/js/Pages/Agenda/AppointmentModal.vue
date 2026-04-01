@@ -62,25 +62,31 @@ const checkingPackage = ref(false)
 
 const checkPackage = async () => {
   packageInfo.value = null
-  if (!selectedClient.value?.id || !selectedService.value?.id) return
+  const clientId = selectedClient.value?.id
+  const serviceId = selectedService.value?.id
+  if (!clientId || !serviceId) return
   checkingPackage.value = true
   try {
     const { data } = await axios.get(`${base}/packages/check-client`, {
-      params: { client_id: selectedClient.value.id, service_id: selectedService.value.id },
+      params: { client_id: clientId, service_id: serviceId },
     })
-    if (data.has_package) {
+    if (data?.has_package) {
       packageInfo.value = data
       usePackage.value = true
     }
   } catch (e) {
-    console.warn('Package check failed:', e)
+    // Silently fail - no package info shown
   } finally {
     checkingPackage.value = false
   }
 }
 
-watch(selectedService, (svc) => {
-  if (svc?.id && selectedClient.value?.id) checkPackage()
+// Check when service changes AND when moving to step 3 (as fallback)
+watch(selectedService, () => checkPackage())
+watch(step, (newStep) => {
+  if (newStep === 3 && !packageInfo.value && selectedClient.value?.id && selectedService.value?.id) {
+    checkPackage()
+  }
 })
 
 // Step 3 - Schedule
