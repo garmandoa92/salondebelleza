@@ -12,6 +12,8 @@ use App\Http\Controllers\Tenant\ServiceCategoryController;
 use App\Http\Controllers\Tenant\StylistController;
 use App\Http\Controllers\Tenant\BlockedTimeController;
 use App\Http\Controllers\Tenant\AppointmentController;
+use App\Http\Controllers\Tenant\BookingController;
+use App\Http\Controllers\Tenant\ClientController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -34,6 +36,15 @@ Route::prefix('/salon/{tenant}')->middleware([
             'tenant' => tenant(),
         ]);
     })->name('tenant.upgrade');
+
+    // Public booking routes (no auth required)
+    Route::get('/reservar', [BookingController::class, 'index'])->name('tenant.booking');
+    Route::get('/reservar/services', [BookingController::class, 'services'])->name('tenant.booking.services');
+    Route::get('/reservar/stylists', [BookingController::class, 'stylists'])->name('tenant.booking.stylists');
+    Route::get('/reservar/availability', [BookingController::class, 'availability'])->name('tenant.booking.availability');
+    Route::post('/reservar/appointments', [BookingController::class, 'store'])->name('tenant.booking.store');
+    Route::get('/reservar/confirm/{token}', [BookingController::class, 'confirm'])->name('tenant.booking.confirm');
+    Route::get('/reservar/cancel/{token}', [BookingController::class, 'cancel'])->name('tenant.booking.cancel');
 
     // Auth routes
     Route::get('/login', [AuthController::class, 'showLogin'])->name('tenant.login');
@@ -94,5 +105,18 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::post('agenda/appointments/{appointment}/start', [AppointmentController::class, 'start'])->name('tenant.appointments.start');
         Route::post('agenda/appointments/{appointment}/complete', [AppointmentController::class, 'complete'])->name('tenant.appointments.complete');
         Route::post('agenda/appointments/{appointment}/no-show', [AppointmentController::class, 'noShow'])->name('tenant.appointments.no-show');
+
+        // Clients CRM
+        Route::resource('clientes', ClientController::class)
+            ->parameters(['clientes' => 'client'])
+            ->names([
+                'index' => 'tenant.clients.index',
+                'create' => 'tenant.clients.create',
+                'store' => 'tenant.clients.store',
+                'show' => 'tenant.clients.show',
+                'edit' => 'tenant.clients.edit',
+                'update' => 'tenant.clients.update',
+                'destroy' => 'tenant.clients.destroy',
+            ]);
     });
 });
