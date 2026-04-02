@@ -68,6 +68,8 @@ const isNow = (apt) => {
 }
 
 const totalCitas = computed(() => (props.today_agenda || []).reduce((s, st) => s + (st.appointments?.length || 0), 0))
+const maxServiceCount = computed(() => Math.max(1, ...(props.month?.top_services || []).map(s => s.count)))
+const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })
 </script>
 
 <template>
@@ -192,25 +194,49 @@ const totalCitas = computed(() => (props.today_agenda || []).reduce((s, st) => s
       <div class="space-y-4">
         <!-- Month metrics -->
         <Card>
-          <CardHeader class="pb-2"><CardTitle class="text-base">Este mes</CardTitle></CardHeader>
-          <CardContent class="space-y-3">
-            <div>
-              <p class="text-xs text-gray-500">Ingresos</p>
-              <p class="text-xl font-bold">${{ Number(month?.revenue || 0).toFixed(2) }}</p>
-              <p :class="['text-xs', Number(pctChange(month?.revenue, month?.last_month_revenue)) >= 0 ? 'text-green-600' : 'text-red-600']">
-                {{ pctChange(month?.revenue, month?.last_month_revenue) }}% vs mes anterior
-              </p>
+          <CardHeader class="pb-2">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-base font-medium">Este mes</CardTitle>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize">{{ currentMonth }}</span>
+            </div>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <!-- Revenue comparison -->
+            <div class="flex items-end justify-between">
+              <div>
+                <p class="text-xs text-gray-500 mb-1">Ingresos</p>
+                <p class="text-2xl font-bold">${{ Number(month?.revenue || 0).toFixed(2) }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-400 mb-1">vs mes anterior</p>
+                <p :class="['text-sm font-bold', Number(pctChange(month?.revenue, month?.last_month_revenue)) >= 0 ? 'text-green-600' : 'text-red-600']">
+                  {{ Number(pctChange(month?.revenue, month?.last_month_revenue)) >= 0 ? '↑' : '↓' }} {{ pctChange(month?.revenue, month?.last_month_revenue) }}%
+                </p>
+              </div>
             </div>
 
+            <!-- Top services with bars -->
             <div v-if="month?.top_services?.length" class="border-t pt-3">
-              <p class="text-xs text-gray-500 mb-2">Servicios mas vendidos</p>
-              <div v-for="svc in month.top_services" :key="svc.name" class="flex items-center justify-between text-sm py-1">
-                <span class="truncate">{{ svc.name }}</span>
-                <div class="flex items-center gap-2">
-                  <Badge variant="secondary" class="text-[10px]">{{ svc.count }}x</Badge>
-                  <span class="text-xs text-gray-500">${{ Number(svc.total).toFixed(0) }}</span>
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Servicios mas vendidos</p>
+              <div class="space-y-3">
+                <div v-for="svc in month.top_services" :key="svc.name">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm text-gray-800 truncate">{{ svc.name }}</span>
+                    <span class="text-xs text-gray-500 shrink-0 ml-2">{{ svc.count }}x · ${{ Number(svc.total).toFixed(0) }}</span>
+                  </div>
+                  <div class="w-full h-2 rounded-full" style="background-color: var(--color-primary-10);">
+                    <div class="h-2 rounded-full transition-all" style="background-color: var(--color-primary);"
+                      :style="{ width: `${(svc.count / maxServiceCount) * 100}%` }" />
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Footer link -->
+            <div class="border-t pt-3">
+              <Link :href="`${base}/reportes`" class="text-sm font-medium hover:underline flex items-center gap-1" style="color: var(--color-primary);">
+                ↗ Ver reporte completo del mes
+              </Link>
             </div>
           </CardContent>
         </Card>
