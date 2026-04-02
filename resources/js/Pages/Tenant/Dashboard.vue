@@ -54,7 +54,7 @@ const statusColors = {
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
+      <Card class="border-l-[3px] border-l-[var(--salon-primary)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Ingresos hoy</p>
           <p class="text-2xl font-bold mt-1">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
@@ -64,7 +64,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card class="border-l-[3px] border-l-[var(--salon-accent)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Citas hoy</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.appointments_total || 0 }}</p>
@@ -76,7 +76,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card class="border-l-[3px] border-l-[var(--salon-primary)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Clientes atendidos</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.clients_today || 0 }}</p>
@@ -84,7 +84,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card class="border-l-[3px] border-l-[var(--salon-accent)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Ocupacion</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.occupancy || 0 }}%</p>
@@ -191,27 +191,27 @@ const statusColors = {
         <Card>
           <CardHeader class="pb-2"><CardTitle class="text-base">Alertas</CardTitle></CardHeader>
           <CardContent class="space-y-2 text-sm">
-            <div v-if="alerts?.low_stock?.length" class="flex items-start gap-2 text-amber-600">
-              <span class="mt-0.5">⚠</span>
+            <div v-if="alerts?.rejected_invoices > 0" class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <span class="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xs font-bold">!</span>
+              <p class="text-sm font-medium text-red-700">{{ alerts.rejected_invoices }} facturas rechazadas</p>
+            </div>
+
+            <div v-if="alerts?.low_stock?.length" class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <span class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-xs font-bold">!</span>
               <div>
-                <p class="font-medium">Stock bajo ({{ alerts.low_stock.length }})</p>
-                <p class="text-xs text-gray-500">{{ alerts.low_stock.map(p => p.name).slice(0, 3).join(', ') }}</p>
+                <p class="text-sm font-medium text-amber-700">Stock bajo ({{ alerts.low_stock.length }})</p>
+                <p class="text-xs text-amber-600">{{ alerts.low_stock.map(p => p.name).slice(0, 3).join(', ') }}</p>
               </div>
             </div>
 
-            <div v-if="alerts?.rejected_invoices > 0" class="flex items-start gap-2 text-red-600">
-              <span class="mt-0.5">⚠</span>
-              <p class="font-medium">{{ alerts.rejected_invoices }} facturas rechazadas</p>
+            <div v-if="alerts?.unconfirmed > 0" class="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <span class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs">🕐</span>
+              <p class="text-sm font-medium text-blue-700">{{ alerts.unconfirmed }} citas sin confirmar (1h+)</p>
             </div>
 
-            <div v-if="alerts?.unconfirmed > 0" class="flex items-start gap-2 text-blue-600">
-              <span class="mt-0.5">🕐</span>
-              <p class="font-medium">{{ alerts.unconfirmed }} citas sin confirmar (1h+)</p>
-            </div>
-
-            <div v-if="alerts?.inactive_clients > 0" class="flex items-start gap-2 text-gray-500">
-              <span class="mt-0.5">👤</span>
-              <p>{{ alerts.inactive_clients }} clientes inactivos (60+ dias)</p>
+            <div v-if="alerts?.inactive_clients > 0" class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              <span class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs">👤</span>
+              <p class="text-sm text-gray-600">{{ alerts.inactive_clients }} clientes inactivos (60+ dias)</p>
             </div>
 
             <p v-if="!alerts?.low_stock?.length && !alerts?.rejected_invoices && !alerts?.unconfirmed" class="text-gray-400 text-center py-2">

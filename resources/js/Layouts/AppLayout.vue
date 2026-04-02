@@ -121,19 +121,20 @@ onMounted(() => {
     <!-- Desktop Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 hidden lg:flex flex-col',
+        'fixed inset-y-0 left-0 z-50 transition-all duration-300 hidden lg:flex flex-col',
         sidebarOpen ? 'w-64' : 'w-20'
       ]"
+      style="background-color: var(--salon-sidebar);"
     >
-      <div class="flex items-center justify-between h-16 px-4 border-b">
-        <span v-if="sidebarOpen" class="text-lg font-bold text-gray-900 truncate">
+      <div class="flex items-center justify-between h-16 px-4 border-b border-white/10">
+        <span v-if="sidebarOpen" class="text-lg font-bold text-white truncate">
           {{ tenant?.name || 'Salon SaaS' }}
         </span>
-        <Button variant="ghost" size="icon" @click="sidebarOpen = !sidebarOpen">
+        <button @click="sidebarOpen = !sidebarOpen" class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
-        </Button>
+        </button>
       </div>
 
       <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
@@ -142,13 +143,13 @@ onMounted(() => {
           :key="item.name"
           :href="item.href"
           :class="[
-            'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+            'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
             $page.url.startsWith(item.href)
-              ? 'bg-primary/10 text-primary'
-              : 'text-gray-700 hover:bg-gray-100'
+              ? 'bg-white/12 text-white border-l-[3px] border-[var(--salon-accent)]'
+              : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-[3px] border-transparent'
           ]"
         >
-          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 flex-shrink-0" :class="$page.url.startsWith(item.href) ? 'text-white' : 'text-white/50'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
           </svg>
           <span v-if="sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
@@ -179,7 +180,7 @@ onMounted(() => {
     <!-- Main content -->
     <div :class="['transition-all duration-300', sidebarOpen ? 'lg:pl-64' : 'lg:pl-20']">
       <!-- Topbar -->
-      <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header class="sticky top-0 z-40 bg-white" style="border-bottom: 2px solid var(--salon-primary);">
         <div class="flex items-center justify-between h-16 px-4 sm:px-6">
           <!-- Mobile menu button -->
           <Sheet v-model:open="mobileOpen">
@@ -190,9 +191,9 @@ onMounted(() => {
                 </svg>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" class="w-64 p-0">
-              <div class="flex items-center h-16 px-4 border-b">
-                <span class="text-lg font-bold">{{ tenant?.name || 'Salon SaaS' }}</span>
+            <SheetContent side="left" class="w-64 p-0" style="background-color: var(--salon-sidebar);">
+              <div class="flex items-center h-16 px-4 border-b border-white/10">
+                <span class="text-lg font-bold text-white">{{ tenant?.name || 'Salon SaaS' }}</span>
               </div>
               <nav class="px-2 py-4 space-y-1">
                 <Link
@@ -201,13 +202,13 @@ onMounted(() => {
                   :href="item.href"
                   @click="mobileOpen = false"
                   :class="[
-                    'flex items-center px-3 py-2 rounded-lg text-sm font-medium',
+                    'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     $page.url.startsWith(item.href)
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-white/12 text-white border-l-[3px] border-[var(--salon-accent)]'
+                      : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-[3px] border-transparent'
                   ]"
                 >
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 mr-3" :class="$page.url.startsWith(item.href) ? 'text-white' : 'text-white/50'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
                   </svg>
                   {{ item.name }}
