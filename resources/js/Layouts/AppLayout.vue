@@ -306,7 +306,7 @@ onMounted(() => {
       </header>
 
       <!-- Page content -->
-      <main class="p-4 sm:p-6 pb-20 lg:pb-6">
+      <main :class="isCheckoutPage ? 'pb-20 lg:pb-0' : 'p-4 sm:p-6 pb-20 lg:pb-6'">
         <slot />
       </main>
     </div>
