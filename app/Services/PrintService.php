@@ -402,9 +402,9 @@ class PrintService
     <title>{$title}</title>
     <style>
         @media print {
-            @page { size: {$paperSize} 2000mm; margin: 0; }
+            @page { margin: 0mm; padding: 0mm; }
             .no-print { display: none !important; }
-            html, body { margin: 0; padding: 0; width: {$paperSize}; }
+            html, body { margin: 0; padding: 0; width: {$width}; }
             .ticket { padding: 2mm; width: {$width}; }
         }
         @media screen {
@@ -440,12 +440,22 @@ class PrintService
 </head>
 <body>
     <div class="no-print" style="width: {$width}; margin-bottom: 8px;">
-        <button class="btn-print" onclick="window.print()">Imprimir</button>
+        <button class="btn-print" onclick="doPrint()">Imprimir</button>
     </div>
-    <div class="ticket">{$body}</div>
+    <div class="ticket" id="ticket">{$body}</div>
     <div class="no-print" style="width: {$width}; margin-top: 8px;">
         <button class="btn-print" onclick="window.close()" style="background: #6b7280;">Cerrar</button>
     </div>
+    <script>
+    function doPrint() {
+        var ticket = document.getElementById('ticket');
+        var h = ticket.scrollHeight + 10;
+        var style = document.createElement('style');
+        style.textContent = '@media print { @page { size: {$paperSize} ' + h + 'px; margin: 0mm; } }';
+        document.head.appendChild(style);
+        setTimeout(function() { window.print(); }, 100);
+    }
+    </script>
 </body>
 </html>
 HTML;
