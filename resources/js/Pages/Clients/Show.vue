@@ -94,46 +94,96 @@ const daysToBirthday = () => {
   if (bday < today) bday.setFullYear(today.getFullYear() + 1)
   return Math.ceil((bday - today) / 86400000)
 }
+
+const openWhatsapp = () => window.open(`https://wa.me/593${props.client.phone?.replace(/^0/, '').replace(/\D/g, '')}`, '_blank')
+
+const tabItems = [
+  { key: 'historial', label: 'Historial', count: () => props.pastAppointments?.length || 0 },
+  { key: 'compras', label: 'Compras', count: () => props.sales?.length || 0 },
+  { key: 'saldo', label: 'Saldo', count: () => advances.value.length },
+  { key: 'paquetes', label: 'Paquetes', count: () => clientPackages.value.length },
+  { key: 'futuras', label: 'Futuras', count: () => props.futureAppointments?.length || 0 },
+]
 </script>
 
 <template>
   <Head :title="`${client.first_name} ${client.last_name}`" />
 
-  <div class="space-y-6">
+  <div class="space-y-5">
+    <!-- Header -->
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">{{ client.first_name }} {{ client.last_name }}</h1>
+      <div class="flex items-center gap-3">
+        <Link :href="`${base}/clientes`" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </Link>
+        <h1>{{ client.first_name }} {{ client.last_name }}</h1>
+      </div>
       <div class="flex gap-2">
-        <Link :href="`/salon/${tenantId}/clientes/${client.id}/edit`">
-          <Button variant="outline">Editar</Button>
-        </Link>
-        <Link :href="`/salon/${tenantId}/clientes`">
-          <Button variant="outline">Volver</Button>
-        </Link>
+        <Link :href="`${base}/clientes/${client.id}/edit`"><Button variant="outline" size="sm">Editar</Button></Link>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left panel - Client info -->
-      <Card>
-        <CardContent class="pt-6 space-y-4">
-          <div class="text-center">
-            <Avatar class="h-20 w-20 mx-auto">
-              <AvatarFallback class="text-2xl">{{ initials }}</AvatarFallback>
-            </Avatar>
-            <h2 class="mt-3" style="font-size:20px; font-weight:600; color:#1A2420;">{{ client.first_name }} {{ client.last_name }}</h2>
-            <div class="flex justify-center gap-1 mt-1">
-              <Badge v-for="tag in (client.tags || [])" :key="tag" variant="secondary" class="text-xs">{{ tag }}</Badge>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- ===== LEFT PANEL ===== -->
+      <div class="space-y-4">
+        <!-- Profile card -->
+        <Card>
+          <CardContent class="pt-6">
+            <!-- Avatar + Name -->
+            <div class="text-center">
+              <div class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-white" style="background-color: var(--color-primary);">
+                {{ initials }}
+              </div>
+              <h2 class="mt-3" style="font-size:20px; font-weight:600; color:#1A2420;">{{ client.first_name }} {{ client.last_name }}</h2>
+              <a v-if="client.phone" :href="`https://wa.me/593${client.phone?.replace(/^0/, '')}`" target="_blank"
+                class="t-action text-[15px] hover:underline">{{ client.phone }}</a>
+              <div v-if="client.tags?.length" class="flex justify-center gap-1 mt-2">
+                <span v-for="tag in client.tags" :key="tag" class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background-color: var(--color-primary-10); color: var(--color-primary);">{{ tag }}</span>
+              </div>
             </div>
-          </div>
 
-          <div class="space-y-3 border-t pt-4">
-            <div class="flex justify-between items-center">
-              <span class="t-label">Telefono</span>
-              <a :href="`https://wa.me/593${client.phone?.replace(/^0/, '')}`" target="_blank" class="t-action hover:underline">{{ client.phone }}</a>
+            <!-- Quick actions -->
+            <div class="flex gap-2 mt-4">
+              <Button variant="outline" size="sm" class="flex-1 text-xs border-[var(--color-primary)] text-[var(--color-primary)]" @click="openWhatsapp">WhatsApp</Button>
+              <Link :href="`${base}/agenda`" class="flex-1"><Button variant="outline" size="sm" class="w-full text-xs border-[var(--color-primary)] text-[var(--color-primary)]">Agendar</Button></Link>
+              <Link :href="`${base}/ventas/nueva`" class="flex-1"><Button size="sm" class="w-full text-xs">Cobrar</Button></Link>
             </div>
+          </CardContent>
+        </Card>
+
+        <!-- Metrics cards -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="kpi-card-primary rounded-xl p-3 text-center">
+            <p class="t-kpi" style="color:#fff; font-size:22px;">{{ metrics.total_visits }}</p>
+            <p class="kpi-label" style="color:rgba(255,255,255,0.75);">Visitas</p>
+          </div>
+          <div class="kpi-card-accent rounded-xl p-3 text-center">
+            <p class="t-kpi" style="color:#fff; font-size:22px;">${{ Number(metrics.total_spent).toFixed(0) }}</p>
+            <p class="kpi-label" style="color:rgba(255,255,255,0.75);">Gastado</p>
+          </div>
+          <div class="kpi-card-light rounded-xl p-3 text-center">
+            <p class="t-kpi kpi-value-primary" style="font-size:22px;">${{ Number(metrics.avg_ticket).toFixed(0) }}</p>
+            <p class="kpi-label">Ticket prom.</p>
+          </div>
+          <div class="kpi-card-light-accent rounded-xl p-3 text-center">
+            <p class="t-name truncate">{{ metrics.favorite_service || '-' }}</p>
+            <p class="kpi-label mt-1">Favorito</p>
+          </div>
+        </div>
+
+        <!-- Balance -->
+        <div v-if="clientBalance > 0" class="rounded-xl p-4" style="background-color: var(--color-primary-10); border: 1px solid var(--color-primary-15);">
+          <p class="kpi-label" style="color: var(--color-primary);">Saldo a favor</p>
+          <p class="t-kpi mt-1" style="color: var(--color-primary);">${{ clientBalance.toFixed(2) }}</p>
+          <button @click="activeTab = 'saldo'" class="t-action text-xs mt-1 hover:underline">Ver movimientos</button>
+        </div>
+
+        <!-- Info card -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
             <div v-if="client.email" class="flex justify-between items-center">
               <span class="t-label">Email</span>
-              <span class="t-name">{{ client.email }}</span>
+              <span class="t-name text-right truncate ml-2">{{ client.email }}</span>
             </div>
             <div v-if="client.cedula" class="flex justify-between items-center">
               <span class="t-label">Cedula</span>
@@ -143,11 +193,11 @@ const daysToBirthday = () => {
               <span class="t-label">Cumpleanos</span>
               <span class="t-name">
                 {{ formatDate(client.birthday) }}
-                <span v-if="daysToBirthday() <= 30" class="t-action text-xs ml-1">(en {{ daysToBirthday() }}d)</span>
+                <span v-if="daysToBirthday() <= 30" class="t-action text-[11px] ml-1">(en {{ daysToBirthday() }}d)</span>
               </span>
             </div>
             <div v-if="client.preferred_stylist" class="flex justify-between items-center">
-              <span class="t-label">Estilista favorito</span>
+              <span class="t-label">Estilista fav.</span>
               <span class="t-name">{{ client.preferred_stylist.name }}</span>
             </div>
             <div class="flex justify-between items-center">
@@ -155,105 +205,93 @@ const daysToBirthday = () => {
               <span class="t-name">{{ client.source }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="t-label">Puntos fidelidad</span>
+              <span class="t-label">Puntos</span>
               <span class="t-name">{{ client.loyalty_points }}</span>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <!-- Balance -->
-          <div v-if="clientBalance > 0" class="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p class="text-xs text-green-600 mb-1">Saldo a favor</p>
-            <p class="text-xl font-bold text-green-700">${{ clientBalance.toFixed(2) }}</p>
-            <button @click="activeTab = 'saldo'" class="text-xs text-green-600 hover:underline mt-1">Ver movimientos</button>
-          </div>
-
-          <!-- Allergies alert -->
-          <div v-if="client.allergies" class="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p class="text-xs font-medium text-red-700 flex items-center gap-1">⚠ Alergias</p>
-            <p class="text-sm text-red-600 mt-1">{{ client.allergies }}</p>
-          </div>
-
-          <!-- Notes -->
-          <div v-if="client.notes" class="text-sm">
-            <p class="text-gray-500 text-xs mb-1">Notas del equipo</p>
-            <p class="text-gray-700">{{ client.notes }}</p>
-          </div>
-
-          <!-- Metrics -->
-          <div class="grid grid-cols-2 gap-3 border-t pt-4">
-            <div class="text-center">
-              <p style="font-size:22px; font-weight:700; color:#1A2420;">{{ metrics.total_visits }}</p>
-              <p class="t-label mt-1">Visitas</p>
-            </div>
-            <div class="text-center">
-              <p style="font-size:22px; font-weight:700; color:#1A2420;">${{ Number(metrics.total_spent).toFixed(0) }}</p>
-              <p class="t-label mt-1">Total gastado</p>
-            </div>
-            <div class="text-center">
-              <p style="font-size:22px; font-weight:700; color:#1A2420;">${{ Number(metrics.avg_ticket).toFixed(0) }}</p>
-              <p class="t-label mt-1">Ticket promedio</p>
-            </div>
-            <div class="text-center">
-              <p class="t-name truncate">{{ metrics.favorite_service || '-' }}</p>
-              <p class="t-label mt-1">Servicio favorito</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <!-- Right panel - Tabs -->
-      <div class="lg:col-span-2 space-y-4">
-        <!-- Tab nav -->
-        <div class="flex border-b">
-          <button
-            v-for="tab in [{ key: 'historial', label: 'Historial' }, { key: 'compras', label: 'Compras' }, { key: 'saldo', label: 'Saldo' }, { key: 'paquetes', label: 'Paquetes' }, { key: 'futuras', label: 'Citas futuras' }]"
-            :key="tab.key"
-            @click="activeTab = tab.key"
-            :class="['px-4 py-2 text-sm font-medium border-b-2 transition-colors',
-              activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']"
-          >{{ tab.label }}</button>
+        <!-- Allergies -->
+        <div v-if="client.allergies" class="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p class="text-xs font-bold text-red-700 uppercase tracking-wider mb-1">Alergias</p>
+          <p class="text-sm text-red-600">{{ client.allergies }}</p>
         </div>
 
-        <!-- Tab: Historial -->
+        <!-- Notes -->
+        <Card v-if="client.notes">
+          <CardContent class="pt-4">
+            <p class="kpi-label mb-2">Notas del equipo</p>
+            <p class="text-sm text-gray-700 leading-relaxed">{{ client.notes }}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <!-- ===== RIGHT PANEL ===== -->
+      <div class="lg:col-span-2 space-y-4">
+        <!-- Tab nav with counters -->
+        <div class="flex border-b overflow-x-auto">
+          <button
+            v-for="tab in tabItems"
+            :key="tab.key"
+            @click="activeTab = tab.key"
+            :class="['px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5',
+              activeTab === tab.key ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-gray-500 hover:text-gray-700']"
+          >
+            {{ tab.label }}
+            <span v-if="tab.count()" :class="['text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+              activeTab === tab.key ? 'bg-[var(--color-primary-10)] text-[var(--color-primary)]' : 'bg-gray-100 text-gray-500']">{{ tab.count() }}</span>
+          </button>
+        </div>
+
+        <!-- Tab: Historial (timeline) -->
         <Card v-if="activeTab === 'historial'">
           <CardContent class="pt-4">
-            <div v-if="pastAppointments?.length" class="space-y-3">
-              <div v-for="apt in pastAppointments" :key="apt.id" class="flex items-start gap-3 py-3 border-b border-[#EEF2F0] last:border-0">
-                <div class="w-2.5 h-2.5 rounded-full mt-1.5" :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }" />
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between">
+            <div v-if="pastAppointments?.length" class="relative pl-6">
+              <!-- Timeline line -->
+              <div class="absolute left-[9px] top-2 bottom-2 w-px bg-gray-200" />
+              <div v-for="apt in pastAppointments" :key="apt.id" class="relative pb-5 last:pb-0">
+                <!-- Timeline dot -->
+                <div class="absolute -left-6 top-1 w-[18px] h-[18px] rounded-full border-2 border-white flex items-center justify-center"
+                  :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }">
+                  <div class="w-2 h-2 rounded-full bg-white" />
+                </div>
+                <!-- Content -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
                     <p style="font-size:14px; font-weight:600; color:#1A2420;">{{ apt.service?.name }}</p>
+                    <p class="t-meta mt-0.5">{{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — <span class="t-name" style="font-size:12px;">{{ apt.stylist?.name }}</span></p>
+                    <p v-if="apt.notes" class="t-meta mt-1 italic">{{ apt.notes }}</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
                     <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">
                       {{ statusLabels[apt.status?.value || apt.status] }}
                     </span>
+                    <p class="t-money" style="font-size:15px;">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
                   </div>
-                  <p class="t-meta mt-0.5">
-                    {{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — {{ apt.stylist?.name }}
-                  </p>
-                  <p v-if="apt.notes" class="t-meta mt-1 italic">{{ apt.notes }}</p>
                 </div>
-                <p class="t-money" style="font-size:15px;">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
               </div>
             </div>
-            <p v-else class="text-sm text-gray-400 text-center py-6">Sin historial de citas</p>
+            <p v-else class="text-sm text-gray-400 text-center py-8">Sin historial de citas</p>
           </CardContent>
         </Card>
 
         <!-- Tab: Compras -->
         <Card v-if="activeTab === 'compras'">
           <CardContent class="pt-4">
-            <div v-if="sales?.length" class="space-y-3">
-              <div v-for="sale in sales" :key="sale.id" class="py-2 border-b last:border-0">
-                <div class="flex justify-between text-sm">
-                  <span class="text-gray-500">{{ formatDate(sale.created_at) }}</span>
-                  <span class="font-semibold">${{ Number(sale.total).toFixed(2) }}</span>
+            <div v-if="sales?.length" class="space-y-0">
+              <div v-for="sale in sales" :key="sale.id" class="py-3 border-b border-[#EEF2F0] last:border-0">
+                <div class="flex justify-between items-center">
+                  <span class="t-meta">{{ formatDate(sale.created_at) }}</span>
+                  <span class="t-money" style="font-size:15px;">${{ Number(sale.total).toFixed(2) }}</span>
                 </div>
-                <div v-for="item in sale.items" :key="item.id" class="text-xs text-gray-500 ml-2">
-                  {{ item.name }} x{{ item.quantity }} — ${{ Number(item.subtotal).toFixed(2) }}
+                <div v-for="item in sale.items" :key="item.id" class="mt-1 ml-3 flex items-center gap-2">
+                  <span class="w-1 h-1 rounded-full bg-gray-300" />
+                  <span class="t-name" style="font-size:12px;">{{ item.name }}</span>
+                  <span class="t-meta">x{{ item.quantity }} — ${{ Number(item.subtotal).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
-            <p v-else class="text-sm text-gray-400 text-center py-6">Sin compras registradas</p>
+            <p v-else class="text-sm text-gray-400 text-center py-8">Sin compras registradas</p>
           </CardContent>
         </Card>
 
