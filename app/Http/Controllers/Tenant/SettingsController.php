@@ -109,12 +109,19 @@ class SettingsController extends Controller
         }
         $certs = $result['certs'];
 
+        // Extract certificate metadata
+        $certInfo = [];
+        if (! empty($certs['cert'])) {
+            $certInfo = \App\Services\Sri\SriCertificateReader::extractInfo($certs['cert']);
+        }
+
         $tenant = tenant();
         $settings = $tenant->settings ?? [];
         $settings['sri_certificate'] = Crypt::encrypt(base64_encode($content));
         $settings['sri_certificate_password'] = Crypt::encrypt($request->certificate_password);
         $settings['sri_certificate_uploaded'] = true;
         $settings['sri_certificate_uploaded_at'] = now()->toIso8601String();
+        $settings['certificate_info'] = $certInfo;
         $tenant->update(['settings' => $settings]);
 
         return back()->with('success', 'Certificado SRI subido correctamente.');

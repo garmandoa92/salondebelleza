@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, useForm, usePage, router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,6 +70,12 @@ const previewColors = () => {
   root.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`)
 }
 const submitAppearance = () => appearanceForm.put(`${base}/settings/appearance`)
+
+// Certificate info
+const showCertForm = ref(false)
+const certInfo = computed(() => props.settings?.certificate_info)
+const certExpired = computed(() => certInfo.value?.is_valid === false)
+const certExpiringSoon = computed(() => certInfo.value?.days_until_expiry != null && certInfo.value.days_until_expiry <= 30 && certInfo.value.days_until_expiry >= 0)
 
 // SRI form
 const sriForm = useForm({
@@ -273,22 +279,54 @@ const tabs = [
 
       <Card>
         <CardHeader><CardTitle class="text-base">Certificado digital (.p12)</CardTitle></CardHeader>
-        <CardContent>
-          <div v-if="hasCertificate" class="flex items-center gap-2 mb-4">
-            <Badge class="bg-green-100 text-green-700">Certificado cargado</Badge>
+        <CardContent class="space-y-4">
+          <!-- Certificate info card -->
+          <div v-if="hasCertificate && settings?.certificate_info" class="border rounded-lg p-4 space-y-2"
+            :class="certExpired ? 'border-red-300 bg-red-50' : certExpiringSoon ? 'border-amber-300 bg-amber-50' : 'border-green-300 bg-green-50'">
+            <div class="flex items-center gap-2">
+              <span v-if="certExpired" class="text-red-600 font-medium text-sm">Certificado vencido</span>
+              <span v-else-if="certExpiringSoon" class="text-amber-700 font-medium text-sm">Certificado por vencer</span>
+              <span v-else class="text-green-700 font-medium text-sm">Certificado digital activo</span>
+            </div>
+            <table class="text-sm w-full">
+              <tr v-if="settings.certificate_info.titular"><td class="text-gray-500 pr-3 py-0.5">Titular</td><td class="font-medium">{{ settings.certificate_info.titular }}</td></tr>
+              <tr v-if="settings.certificate_info.ruc"><td class="text-gray-500 pr-3 py-0.5">RUC</td><td class="font-medium font-mono">{{ settings.certificate_info.ruc }}</td></tr>
+              <tr v-if="settings.certificate_info.issuer"><td class="text-gray-500 pr-3 py-0.5">Emitido por</td><td>{{ settings.certificate_info.issuer }}</td></tr>
+              <tr v-if="settings.certificate_info.valid_from"><td class="text-gray-500 pr-3 py-0.5">Valido desde</td><td>{{ settings.certificate_info.valid_from }}</td></tr>
+              <tr v-if="settings.certificate_info.valid_until">
+                <td class="text-gray-500 pr-3 py-0.5">Valido hasta</td>
+                <td :class="certExpired ? 'text-red-600 font-bold' : certExpiringSoon ? 'text-amber-600 font-bold' : ''">
+                  {{ settings.certificate_info.valid_until }}
+                  <span v-if="certExpiringSoon && !certExpired" class="text-xs"> ({{ settings.certificate_info.days_until_expiry }} dias)</span>
+                </td>
+              </tr>
+            </table>
           </div>
-          <form @submit.prevent="submitCert" class="space-y-4 max-w-lg">
-            <div class="space-y-2">
-              <Label>Archivo .p12</Label>
-              <Input type="file" accept=".p12,.pfx" @change="certForm.certificate = $event.target.files[0]" />
-              <p v-if="certForm.errors.certificate" class="text-sm text-red-500">{{ certForm.errors.certificate }}</p>
-            </div>
-            <div class="space-y-2">
-              <Label>Contrasena del certificado</Label>
-              <Input v-model="certForm.certificate_password" type="password" />
-            </div>
-            <Button type="submit" :disabled="certForm.processing">Subir certificado</Button>
-          </form>
+
+          <div v-else-if="hasCertificate" class="flex items-center gap-2">
+            <Badge class="bg-green-100 text-green-700">Certificado cargado</Badge>
+            <span class="text-xs text-gray-400">Sube de nuevo para ver los datos del certificado</span>
+          </div>
+
+          <!-- Upload / replace form -->
+          <div v-if="showCertForm || !hasCertificate">
+            <form @submit.prevent="submitCert" class="space-y-4 max-w-lg">
+              <div class="space-y-2">
+                <Label>Archivo .p12</Label>
+                <Input type="file" accept=".p12,.pfx" @change="certForm.certificate = $event.target.files[0]" />
+                <p v-if="certForm.errors.certificate" class="text-sm text-red-500">{{ certForm.errors.certificate }}</p>
+              </div>
+              <div class="space-y-2">
+                <Label>Contrasena del certificado</Label>
+                <Input v-model="certForm.certificate_password" type="password" />
+              </div>
+              <div class="flex gap-2">
+                <Button type="submit" :disabled="certForm.processing">Subir certificado</Button>
+                <Button v-if="hasCertificate" type="button" variant="outline" @click="showCertForm = false">Cancelar</Button>
+              </div>
+            </form>
+          </div>
+          <Button v-else variant="outline" size="sm" @click="showCertForm = true">Reemplazar certificado</Button>
         </CardContent>
       </Card>
     </div>

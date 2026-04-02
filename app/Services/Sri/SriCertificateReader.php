@@ -87,4 +87,72 @@ class SriCertificateReader
             @unlink($tmpPem);
         }
     }
+
+    /**
+     * Extract certificate metadata (subject, issuer, dates) from PEM certificate string.
+     */
+    public static function extractInfo(string $certPem): array
+    {
+        $tmpCert = tempnam(sys_get_temp_dir(), 'cert_');
+        file_put_contents($tmpCert, $certPem);
+
+        try {
+            $process = new Process([
+                'openssl', 'x509',
+                '-in', $tmpCert,
+                '-noout', '-subject', '-issuer', '-dates',
+                '-nameopt', 'utf8',
+            ]);
+            $process->run();
+
+            if (! $process->isSuccessful()) {
+                Log::warning('SriCertificateReader: no se pudo extraer info', ['error' => $process->getErrorOutput()]);
+                return [];
+            }
+
+            $output = $process->getOutput();
+            $info = [];
+
+            // Parse subject line
+            if (preg_match('/subject\s*=\s*(.+)/i', $output, $m)) {
+                $subject = trim($m[1]);
+                $info['subject_raw'] = $subject;
+
+                // Extract CN (Common Name) = titular
+                if (preg_match('/CN\s*=\s*([^,\/]+)/i', $subject, $cn)) {
+                    $info['titular'] = trim($cn[1]);
+                }
+                // Extract serialNumber or OID 2.5.4.5 = RUC/cedula
+                if (preg_match('/serialNumber\s*=\s*(\d+)/i', $subject, $sn)) {
+                    $info['ruc'] = trim($sn[1]);
+                } elseif (preg_match('/OID\.2\.5\.4\.5\s*=\s*(\d+)/i', $subject, $sn)) {
+                    $info['ruc'] = trim($sn[1]);
+                }
+            }
+
+            // Parse issuer
+            if (preg_match('/issuer\s*=\s*(.+)/i', $output, $m)) {
+                $issuer = trim($m[1]);
+                if (preg_match('/O\s*=\s*([^,\/]+)/i', $issuer, $o)) {
+                    $info['issuer'] = trim($o[1]);
+                } else {
+                    $info['issuer'] = $issuer;
+                }
+            }
+
+            // Parse dates
+            if (preg_match('/notBefore\s*=\s*(.+)/i', $output, $m)) {
+                $info['valid_from'] = date('Y-m-d', strtotime(trim($m[1])));
+            }
+            if (preg_match('/notAfter\s*=\s*(.+)/i', $output, $m)) {
+                $info['valid_until'] = date('Y-m-d', strtotime(trim($m[1])));
+                $info['is_valid'] = strtotime(trim($m[1])) > time();
+                $info['days_until_expiry'] = (int) ((strtotime(trim($m[1])) - time()) / 86400);
+            }
+
+            return $info;
+        } finally {
+            @unlink($tmpCert);
+        }
+    }
 }
