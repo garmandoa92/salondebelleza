@@ -116,27 +116,44 @@ class SaleService
     public function createInvoice(Sale $sale, array $invoiceData, array $tenantConfig): SriInvoice
     {
         return DB::transaction(function () use ($sale, $invoiceData, $tenantConfig) {
-            // Get next sequential
-            $maxSeq = SriInvoice::where('establishment', $invoiceData['establishment'] ?? '001')
-                ->where('emission_point', $invoiceData['emission_point'] ?? '001')
-                ->max(DB::raw('CAST(sequential AS UNSIGNED)'));
-            $nextSeq = str_pad((string) (($maxSeq ?? 0) + 1), 9, '0', STR_PAD_LEFT);
+            $settings = tenant()->settings ?? [];
+            $est = $settings['establecimiento'] ?? '001';
+            $pto = $settings['punto_emision'] ?? '001';
+            $invoiceType = ($invoiceData['buyer_identification_type'] ?? 'final_consumer') === 'final_consumer' ? 'sale_note' : 'invoice';
+
+            // Get next sequential: check override first, then DB max
+            $overrideKey = 'sequential_override_' . $invoiceType;
+            $override = $settings[$overrideKey] ?? null;
+
+            if ($override) {
+                $nextSeq = $override;
+                // Clear the override after using it
+                unset($settings[$overrideKey]);
+                tenant()->update(['settings' => $settings]);
+            } else {
+                $maxSeq = SriInvoice::where('invoice_type', $invoiceType)
+                    ->where('establishment', $est)
+                    ->where('emission_point', $pto)
+                    ->lockForUpdate()
+                    ->max(DB::raw('CAST(sequential AS UNSIGNED)'));
+                $nextSeq = str_pad((string) (($maxSeq ?? 0) + 1), 9, '0', STR_PAD_LEFT);
+            }
 
             $keyGenerator = new SriAccessKeyGenerator();
             $accessKey = $keyGenerator->generate(
                 now()->toDateString(),
-                $invoiceData['buyer_identification_type'] === 'final_consumer' ? 'sale_note' : 'invoice',
+                $invoiceType,
                 $tenantConfig['ruc'] ?? '0000000000001',
                 $tenantConfig['ambiente_sri'] ?? 'test',
-                $invoiceData['establishment'] ?? '001',
-                $invoiceData['emission_point'] ?? '001',
+                $est,
+                $pto,
                 $nextSeq,
             );
 
             $invoice = SriInvoice::create([
-                'invoice_type' => $invoiceData['buyer_identification_type'] === 'final_consumer' ? 'sale_note' : 'invoice',
-                'establishment' => $invoiceData['establishment'] ?? '001',
-                'emission_point' => $invoiceData['emission_point'] ?? '001',
+                'invoice_type' => $invoiceType,
+                'establishment' => $est,
+                'emission_point' => $pto,
                 'sequential' => $nextSeq,
                 'access_key' => $accessKey,
                 'issue_date' => now(),

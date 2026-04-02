@@ -135,6 +135,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::post('ventas', [SaleController::class, 'store'])->name('tenant.sales.store');
         Route::get('ventas/{sale}', [SaleController::class, 'show'])->name('tenant.sales.show');
         Route::post('ventas/{sale}/invoice', [SaleController::class, 'invoice'])->name('tenant.sales.invoice');
+        Route::post('facturacion/{invoice}/retry', [SaleController::class, 'retryInvoice'])->name('tenant.invoices.retry');
 
         // SRI Invoices
         Route::get('facturacion', [SriInvoiceController::class, 'index'])->name('tenant.invoices.index');

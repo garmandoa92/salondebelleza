@@ -120,6 +120,27 @@ class SaleController extends Controller
         return response()->json(['success' => true, 'invoice_id' => $invoice->id]);
     }
 
+    public function retryInvoice(\App\Models\SriInvoice $invoice)
+    {
+        $invoice->load('sale.items');
+        $tenantConfig = tenant()->settings ?? [];
+        $tenantConfig['ruc'] = tenant()->ruc ?? '0000000000001';
+        $tenantConfig['razon_social'] = tenant()->razon_social ?? tenant()->name;
+        $tenantConfig['nombre_comercial'] = tenant()->name;
+        $tenantConfig['direccion_matriz'] = tenant()->address ?? 'Ecuador';
+
+        $saleItems = $invoice->sale?->items?->map(fn ($i) => $i->toArray())->toArray() ?? [];
+        $payments = $invoice->sale?->payment_methods ?? [['method' => 'cash', 'amount' => (float) $invoice->total]];
+
+        $invoice->update(['sri_status' => 'draft', 'error_message' => null]);
+
+        \App\Jobs\ProcessSriDocumentJob::dispatch(
+            $invoice->id, $tenantConfig, $saleItems, $payments,
+        );
+
+        return response()->json(['success' => true, 'message' => 'Reintentando envio al SRI...']);
+    }
+
     public function summary()
     {
         return response()->json($this->saleService->getDaySummary());
