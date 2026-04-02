@@ -22,6 +22,7 @@ class StoreServiceRequest extends FormRequest
             'preparation_minutes' => ['nullable', 'integer', 'min:0', 'max:60'],
             'is_visible' => ['boolean'],
             'requires_consultation' => ['boolean'],
+            'iva_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'image' => ['nullable', 'image', 'max:2048'],
             'recipe' => ['nullable', 'array'],
             'recipe.*.product_id' => ['required_with:recipe', 'uuid'],
