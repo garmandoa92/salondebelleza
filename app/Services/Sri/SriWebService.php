@@ -26,7 +26,7 @@ class SriWebService
                 'trace' => true,
             ]);
 
-            $response = $client->validarComprobante(['xml' => base64_encode($xmlFirmado)]);
+            $response = $client->validarComprobante(['xml' => $xmlFirmado]);
 
             $estado = $response->RespuestaRecepcionComprobante->estado ?? 'DEVUELTA';
             $mensajes = [];

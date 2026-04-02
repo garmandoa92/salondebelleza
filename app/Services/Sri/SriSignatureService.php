@@ -103,11 +103,12 @@ class SriSignatureService
         // Sign the XML
         $objDSig->sign($objKey);
 
-        // Add certificate to KeyInfo
+        // Add certificate to KeyInfo (pass full PEM)
+        $objDSig->add509Cert($certPem, true, false, ['issuerSerial' => true, 'subjectName' => true]);
+
+        // Clean cert for XAdES properties
         $certClean = preg_replace('/-----[^-]+-----/', '', $certPem);
         $certClean = preg_replace('/\s+/', '', $certClean);
-
-        $objDSig->add509Cert($certClean, true, false, ['issuerSerial' => true, 'subjectName' => true]);
 
         // Append signature to root element FIRST
         $objDSig->appendSignature($doc->documentElement);

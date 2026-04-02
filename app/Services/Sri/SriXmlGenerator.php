@@ -25,7 +25,7 @@ class SriXmlGenerator
     public function generate(SriInvoice $invoice, array $tenantConfig, array $saleItems, array $payments): string
     {
         $doc = new DOMDocument('1.0', 'UTF-8');
-        $doc->formatOutput = true;
+        $doc->formatOutput = false;
 
         $invoiceType = $invoice->invoice_type instanceof \BackedEnum ? $invoice->invoice_type->value : $invoice->invoice_type;
         $codDoc = match ($invoiceType) {
@@ -58,9 +58,9 @@ class SriXmlGenerator
 
         $regimen = $tenantConfig['regimen_tributario'] ?? 'general';
         if ($regimen === 'rimpe_emprendedor') {
-            $this->addElement($doc, $infoTrib, 'regimenMicroempresa', 'CONTRIBUYENTE REGIMEN MICROEMPRESAS');
+            $this->addElement($doc, $infoTrib, 'contribuyenteRimpe', 'CONTRIBUYENTE RÉGIMEN RIMPE');
         } elseif ($regimen === 'rimpe_negocio_popular') {
-            $this->addElement($doc, $infoTrib, 'contribuyenteRimpe', 'CONTRIBUYENTE NEGOCIO POPULAR');
+            $this->addElement($doc, $infoTrib, 'contribuyenteRimpe', 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE');
         }
 
         $root->appendChild($infoTrib);
@@ -142,16 +142,17 @@ class SriXmlGenerator
         }
         $root->appendChild($detalles);
 
-        // infoAdicional
-        if ($invoice->buyer_email || $invoice->buyer_identification) {
-            $infoAdicional = $doc->createElement('infoAdicional');
-            if ($invoice->buyer_email) {
-                $campo = $doc->createElement('campoAdicional', $invoice->buyer_email);
-                $campo->setAttribute('nombre', 'Email');
-                $infoAdicional->appendChild($campo);
-            }
-            $root->appendChild($infoAdicional);
+        // infoAdicional (obligatorio, al menos 1 campoAdicional)
+        $infoAdicional = $doc->createElement('infoAdicional');
+        $campoDir = $doc->createElement('campoAdicional', $tenantConfig['direccion_matriz'] ?? 'Ecuador');
+        $campoDir->setAttribute('nombre', 'Direccion');
+        $infoAdicional->appendChild($campoDir);
+        if ($invoice->buyer_email) {
+            $campoEmail = $doc->createElement('campoAdicional', $invoice->buyer_email);
+            $campoEmail->setAttribute('nombre', 'Email');
+            $infoAdicional->appendChild($campoEmail);
         }
+        $root->appendChild($infoAdicional);
 
         return $doc->saveXML();
     }
