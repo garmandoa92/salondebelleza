@@ -120,43 +120,43 @@ const daysToBirthday = () => {
             <Avatar class="h-20 w-20 mx-auto">
               <AvatarFallback class="text-2xl">{{ initials }}</AvatarFallback>
             </Avatar>
-            <h2 class="mt-3 font-semibold text-lg">{{ client.first_name }} {{ client.last_name }}</h2>
+            <h2 class="mt-3" style="font-size:20px; font-weight:600; color:#1A2420;">{{ client.first_name }} {{ client.last_name }}</h2>
             <div class="flex justify-center gap-1 mt-1">
               <Badge v-for="tag in (client.tags || [])" :key="tag" variant="secondary" class="text-xs">{{ tag }}</Badge>
             </div>
           </div>
 
-          <div class="space-y-3 text-sm border-t pt-4">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Telefono</span>
-              <a :href="`https://wa.me/593${client.phone?.replace(/^0/, '')}`" target="_blank" class="text-primary hover:underline">{{ client.phone }}</a>
+          <div class="space-y-3 border-t pt-4">
+            <div class="flex justify-between items-center">
+              <span class="t-label">Telefono</span>
+              <a :href="`https://wa.me/593${client.phone?.replace(/^0/, '')}`" target="_blank" class="t-action hover:underline">{{ client.phone }}</a>
             </div>
-            <div v-if="client.email" class="flex justify-between">
-              <span class="text-gray-500">Email</span>
-              <span>{{ client.email }}</span>
+            <div v-if="client.email" class="flex justify-between items-center">
+              <span class="t-label">Email</span>
+              <span class="t-name">{{ client.email }}</span>
             </div>
-            <div v-if="client.cedula" class="flex justify-between">
-              <span class="text-gray-500">Cedula</span>
-              <span>{{ client.cedula }}</span>
+            <div v-if="client.cedula" class="flex justify-between items-center">
+              <span class="t-label">Cedula</span>
+              <span class="t-name">{{ client.cedula }}</span>
             </div>
-            <div v-if="client.birthday" class="flex justify-between">
-              <span class="text-gray-500">Cumpleanos</span>
-              <span>
+            <div v-if="client.birthday" class="flex justify-between items-center">
+              <span class="t-label">Cumpleanos</span>
+              <span class="t-name">
                 {{ formatDate(client.birthday) }}
-                <span v-if="daysToBirthday() <= 30" class="text-primary text-xs ml-1">(en {{ daysToBirthday() }}d)</span>
+                <span v-if="daysToBirthday() <= 30" class="t-action text-xs ml-1">(en {{ daysToBirthday() }}d)</span>
               </span>
             </div>
-            <div v-if="client.preferred_stylist" class="flex justify-between">
-              <span class="text-gray-500">Estilista favorito</span>
-              <span>{{ client.preferred_stylist.name }}</span>
+            <div v-if="client.preferred_stylist" class="flex justify-between items-center">
+              <span class="t-label">Estilista favorito</span>
+              <span class="t-name">{{ client.preferred_stylist.name }}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Fuente</span>
-              <span>{{ client.source }}</span>
+            <div class="flex justify-between items-center">
+              <span class="t-label">Fuente</span>
+              <span class="t-name">{{ client.source }}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Puntos fidelidad</span>
-              <span class="font-medium">{{ client.loyalty_points }}</span>
+            <div class="flex justify-between items-center">
+              <span class="t-label">Puntos fidelidad</span>
+              <span class="t-name">{{ client.loyalty_points }}</span>
             </div>
           </div>
 
@@ -182,20 +182,20 @@ const daysToBirthday = () => {
           <!-- Metrics -->
           <div class="grid grid-cols-2 gap-3 border-t pt-4">
             <div class="text-center">
-              <p class="text-2xl font-bold">{{ metrics.total_visits }}</p>
-              <p class="text-xs text-gray-500">Visitas</p>
+              <p style="font-size:22px; font-weight:700; color:#1A2420;">{{ metrics.total_visits }}</p>
+              <p class="t-label mt-1">Visitas</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold">${{ Number(metrics.total_spent).toFixed(0) }}</p>
-              <p class="text-xs text-gray-500">Total gastado</p>
+              <p style="font-size:22px; font-weight:700; color:#1A2420;">${{ Number(metrics.total_spent).toFixed(0) }}</p>
+              <p class="t-label mt-1">Total gastado</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold">${{ Number(metrics.avg_ticket).toFixed(0) }}</p>
-              <p class="text-xs text-gray-500">Ticket promedio</p>
+              <p style="font-size:22px; font-weight:700; color:#1A2420;">${{ Number(metrics.avg_ticket).toFixed(0) }}</p>
+              <p class="t-label mt-1">Ticket promedio</p>
             </div>
             <div class="text-center">
-              <p class="text-sm font-medium truncate">{{ metrics.favorite_service || '-' }}</p>
-              <p class="text-xs text-gray-500">Servicio favorito</p>
+              <p class="t-name truncate">{{ metrics.favorite_service || '-' }}</p>
+              <p class="t-label mt-1">Servicio favorito</p>
             </div>
           </div>
         </CardContent>
@@ -218,21 +218,21 @@ const daysToBirthday = () => {
         <Card v-if="activeTab === 'historial'">
           <CardContent class="pt-4">
             <div v-if="pastAppointments?.length" class="space-y-3">
-              <div v-for="apt in pastAppointments" :key="apt.id" class="flex items-start gap-3 py-2 border-b last:border-0">
-                <div class="w-2 h-2 rounded-full mt-2" :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }" />
+              <div v-for="apt in pastAppointments" :key="apt.id" class="flex items-start gap-3 py-3 border-b border-[#EEF2F0] last:border-0">
+                <div class="w-2.5 h-2.5 rounded-full mt-1.5" :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }" />
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between">
-                    <p class="text-sm font-medium">{{ apt.service?.name }}</p>
-                    <span :class="['text-xs px-1.5 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">
+                    <p style="font-size:14px; font-weight:600; color:#1A2420;">{{ apt.service?.name }}</p>
+                    <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">
                       {{ statusLabels[apt.status?.value || apt.status] }}
                     </span>
                   </div>
-                  <p class="text-xs text-gray-500">
+                  <p class="t-meta mt-0.5">
                     {{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — {{ apt.stylist?.name }}
                   </p>
-                  <p v-if="apt.notes" class="text-xs text-gray-400 mt-1">{{ apt.notes }}</p>
+                  <p v-if="apt.notes" class="t-meta mt-1 italic">{{ apt.notes }}</p>
                 </div>
-                <p class="text-sm font-medium">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
+                <p class="t-money" style="font-size:15px;">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
               </div>
             </div>
             <p v-else class="text-sm text-gray-400 text-center py-6">Sin historial de citas</p>

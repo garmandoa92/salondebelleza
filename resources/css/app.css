@@ -6,18 +6,14 @@
 
 @layer base {
   :root {
-    /* Dynamic theme — set by JS from tenant settings */
     --color-primary: #4A7C6F;
     --color-accent: #C9A96E;
     --color-bg: #F7F5F2;
     --color-text: #2D3330;
-
-    /* Derived from --color-primary via JS */
     --color-primary-10: rgba(74, 124, 111, 0.10);
     --color-primary-5: rgba(74, 124, 111, 0.05);
     --color-primary-15: rgba(74, 124, 111, 0.15);
 
-    /* shadcn-vue — overridden dynamically by JS */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -73,12 +69,64 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
   body {
     @apply text-foreground;
     background-color: #F4F7F5;
+    font-size: 13px;
+    color: #333333;
+    line-height: 1.5;
+  }
+
+  /* ===== TYPOGRAPHY HIERARCHY ===== */
+
+  /* Page titles */
+  h1, .t-page { font-size: 22px; font-weight: 600; color: #1A2420; letter-spacing: -0.3px; }
+
+  /* Section titles */
+  h2, h3, .t-section { font-size: 15px; font-weight: 600; color: #1A2420; }
+
+  /* Table & form labels */
+  th, .t-label {
+    font-size: 11px; font-weight: 500; color: #888888;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* Large KPI values */
+  .t-kpi { font-size: 26px; font-weight: 700; color: #1A2420; letter-spacing: -0.5px; }
+
+  /* Names in lists */
+  .t-name { font-size: 13px; font-weight: 500; color: #1A2420; }
+
+  /* Secondary/meta text */
+  .t-meta { font-size: 12px; font-weight: 400; color: #888888; }
+
+  /* Action links */
+  .t-action { font-size: 13px; font-weight: 500; color: var(--color-primary); cursor: pointer; }
+
+  /* Money values */
+  .t-money { font-weight: 700; color: var(--color-primary); }
+
+  /* ===== TABLE STYLES ===== */
+  table thead tr th {
+    background: #F4F9F7;
+    font-size: 11px;
+    font-weight: 600;
+    color: #666666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 16px;
+    border-bottom: 1px solid #E0EAE6;
+  }
+  table tbody tr:nth-child(even) { background: #FAFCFB; }
+  table tbody tr:hover { background: #F0F7F4 !important; }
+  table tbody tr td { padding: 10px 16px; font-size: 13px; color: #333333; }
+
+  /* ===== CARD SECTION DIVIDERS ===== */
+  .card-divider {
+    border-top: 0.5px solid #EEF2F0;
+    padding-top: 14px;
+    margin-top: 14px;
   }
 }
 
@@ -91,26 +139,14 @@
     font-weight: 500;
   }
   .sidebar-active svg { color: var(--color-primary); }
-  .sidebar-inactive {
-    color: #555555;
-    border-left-color: transparent;
-  }
+  .sidebar-inactive { color: #555555; border-left-color: transparent; }
   .sidebar-inactive svg { color: #999999; }
-  .sidebar-inactive:hover {
-    background-color: #F4F7F5;
-    color: #333333;
-  }
+  .sidebar-inactive:hover { background-color: #F4F7F5; color: #333333; }
   .sidebar-inactive:hover svg { color: #666666; }
 
   /* KPI cards */
-  .kpi-card-primary {
-    background-color: var(--color-primary);
-    color: #ffffff;
-  }
-  .kpi-card-accent {
-    background-color: var(--color-accent);
-    color: #ffffff;
-  }
+  .kpi-card-primary { background-color: var(--color-primary); color: #ffffff; }
+  .kpi-card-accent { background-color: var(--color-accent); color: #ffffff; }
   .kpi-card-light {
     background-color: color-mix(in srgb, var(--color-primary) 12%, white);
     border: 1px solid color-mix(in srgb, var(--color-primary) 20%, white);
@@ -121,7 +157,7 @@
   }
   .kpi-value-primary { color: var(--color-primary); }
   .kpi-value-accent { color: var(--color-accent); }
-  .kpi-label { color: #666666; }
+  .kpi-label { color: #888888; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
   .kpi-bar-bg { background-color: color-mix(in srgb, var(--color-accent) 25%, white); }
   .kpi-bar { background-color: var(--color-accent); }
 }

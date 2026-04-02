@@ -92,15 +92,15 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="kpi-card-primary rounded-xl p-4">
-        <p class="text-xs font-medium opacity-80">Ingresos hoy</p>
-        <p class="text-2xl font-bold mt-1">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
-        <p class="text-xs mt-1 opacity-75">{{ pctChange(kpis?.revenue_today, kpis?.revenue_yesterday) }}% vs ayer</p>
+        <p class="kpi-label" style="color: rgba(255,255,255,0.75);">Ingresos hoy</p>
+        <p class="t-kpi mt-1" style="color: #fff;">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
+        <p class="t-meta mt-1" style="color: rgba(255,255,255,0.7);">{{ pctChange(kpis?.revenue_today, kpis?.revenue_yesterday) }}% vs ayer</p>
       </div>
 
       <div class="kpi-card-accent rounded-xl p-4">
-        <p class="text-xs font-medium opacity-80">Citas hoy</p>
-        <p class="text-2xl font-bold mt-1">{{ kpis?.appointments_total || 0 }}</p>
-        <div class="flex gap-2 text-xs mt-1 opacity-80">
+        <p class="kpi-label" style="color: rgba(255,255,255,0.75);">Citas hoy</p>
+        <p class="t-kpi mt-1" style="color: #fff;">{{ kpis?.appointments_total || 0 }}</p>
+        <div class="flex gap-2 mt-1" style="color: rgba(255,255,255,0.7); font-size: 12px;">
           <span>{{ kpis?.appointments_completed || 0 }} ok</span>
           <span>{{ kpis?.appointments_pending || 0 }} pend</span>
           <span>{{ kpis?.appointments_cancelled || 0 }} canc</span>
@@ -108,14 +108,14 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
       </div>
 
       <div class="kpi-card-light rounded-xl p-4">
-        <p class="text-xs font-medium kpi-label">Clientes atendidos</p>
-        <p class="text-2xl font-bold mt-1 kpi-value-primary">{{ kpis?.clients_today || 0 }}</p>
-        <p class="text-xs mt-1 kpi-label">unicos hoy</p>
+        <p class="kpi-label">Clientes atendidos</p>
+        <p class="t-kpi mt-1 kpi-value-primary">{{ kpis?.clients_today || 0 }}</p>
+        <p class="t-meta mt-1">unicos hoy</p>
       </div>
 
       <div class="kpi-card-light-accent rounded-xl p-4">
-        <p class="text-xs font-medium kpi-label">Ocupacion</p>
-        <p class="text-2xl font-bold mt-1 kpi-value-accent">{{ kpis?.occupancy || 0 }}%</p>
+        <p class="kpi-label">Ocupacion</p>
+        <p class="t-kpi mt-1 kpi-value-accent">{{ kpis?.occupancy || 0 }}%</p>
         <div class="w-full h-2 rounded-full mt-2 kpi-bar-bg">
           <div class="h-2 rounded-full transition-all kpi-bar" :style="{ width: `${kpis?.occupancy || 0}%` }" />
         </div>
@@ -207,8 +207,8 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
             <!-- Revenue comparison -->
             <div class="flex items-end justify-between">
               <div>
-                <p class="text-xs text-gray-500 mb-1">Ingresos</p>
-                <p class="text-2xl font-bold">${{ Number(month?.revenue || 0).toFixed(2) }}</p>
+                <p class="kpi-label mb-1">Ingresos</p>
+                <p class="t-kpi">${{ Number(month?.revenue || 0).toFixed(2) }}</p>
               </div>
               <div class="text-right">
                 <p class="text-xs text-gray-400 mb-1">vs mes anterior</p>
