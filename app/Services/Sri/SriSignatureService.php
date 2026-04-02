@@ -18,10 +18,11 @@ class SriSignatureService
             return $xml;
         }
 
-        $certs = SriCertificateReader::read($p12Content, $p12Password);
-        if ($certs === false) {
-            throw new \RuntimeException('No se pudo leer el certificado .p12. Verifique la contrasena.');
+        $result = SriCertificateReader::read($p12Content, $p12Password);
+        if ($result['error']) {
+            throw new \RuntimeException('Error .p12: ' . $result['error']);
         }
+        $certs = $result['certs'];
 
         // Full XAdES-BES signing implementation will be completed
         // when certificate management is configured in Session 10.

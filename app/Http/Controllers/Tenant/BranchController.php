@@ -147,9 +147,9 @@ class BranchController extends Controller
         $file = $request->file('certificate');
         $content = file_get_contents($file->getRealPath());
 
-        $certs = \App\Services\Sri\SriCertificateReader::read($content, $request->certificate_password);
-        if ($certs === false) {
-            return back()->withErrors(['certificate' => 'No se pudo leer el certificado. Verifique la contrasena.']);
+        $result = \App\Services\Sri\SriCertificateReader::read($content, $request->certificate_password);
+        if ($result['error']) {
+            return back()->withErrors(['certificate' => 'Error: ' . $result['error']]);
         }
 
         $settings = $branch->settings ?? [];
