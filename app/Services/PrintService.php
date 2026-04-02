@@ -314,14 +314,21 @@ class PrintService
 
         // Totals breakdown
         $subtotalSinImp = (float) $invoice->subtotal_0 + (float) $invoice->subtotal_iva;
-        $totalsHtml = '<div class="line"><span>SUBTOTAL SIN IMPUESTOS:</span><span>$' . number_format($subtotalSinImp, 2) . '</span></div>'
-            . '<div class="line"><span>SUBTOTAL IVA 0%:</span><span>$' . number_format((float) $invoice->subtotal_0, 2) . '</span></div>'
-            . '<div class="line"><span>SUBTOTAL IVA ' . (int) $invoice->iva_rate . '%:</span><span>$' . number_format((float) $invoice->subtotal_iva, 2) . '</span></div>'
-            . '<div class="line"><span>TOTAL DESCUENTO:</span><span>$' . number_format((float) ($invoice->sale?->discount_amount ?? 0), 2) . '</span></div>'
-            . '<div class="line"><span>ICE:</span><span>$0.00</span></div>'
-            . '<div class="line"><span>IVA ' . (int) $invoice->iva_rate . '%:</span><span>$' . number_format((float) $invoice->iva_amount, 2) . '</span></div>'
-            . '<div class="line"><span>IRBPNR:</span><span>$0.00</span></div>'
-            . '<div class="line"><span>PROPINA:</span><span>$' . number_format((float) ($invoice->sale?->tip ?? 0), 2) . '</span></div>';
+        $ivaRate = (int) $invoice->iva_rate;
+        $totalsHtml = '<div class="line"><span>SUBTOTAL SIN IMPUESTOS:</span><span>$' . number_format($subtotalSinImp, 2) . '</span></div>';
+        if ((float) $invoice->subtotal_0 > 0) {
+            $totalsHtml .= '<div class="line"><span>SUBTOTAL IVA 0%:</span><span>$' . number_format((float) $invoice->subtotal_0, 2) . '</span></div>';
+        }
+        if ((float) $invoice->subtotal_iva > 0) {
+            $totalsHtml .= '<div class="line"><span>SUBTOTAL IVA ' . $ivaRate . '%:</span><span>$' . number_format((float) $invoice->subtotal_iva, 2) . '</span></div>';
+        }
+        $totalsHtml .= '<div class="line"><span>TOTAL DESCUENTO:</span><span>$' . number_format((float) ($invoice->sale?->discount_amount ?? 0), 2) . '</span></div>';
+        if ((float) $invoice->iva_amount > 0) {
+            $totalsHtml .= '<div class="line"><span>IVA ' . $ivaRate . '%:</span><span>$' . number_format((float) $invoice->iva_amount, 2) . '</span></div>';
+        }
+        if ((float) ($invoice->sale?->tip ?? 0) > 0) {
+            $totalsHtml .= '<div class="line"><span>PROPINA:</span><span>$' . number_format((float) $invoice->sale->tip, 2) . '</span></div>';
+        }
 
         // Payment methods
         $paymentLabels = ['cash' => 'EFECTIVO', 'transfer' => 'OTROS CON UTILIZACION DEL SISTEMA FINANCIERO', 'card_debit' => 'TARJETA DE DEBITO', 'card_credit' => 'TARJETA DE CREDITO', 'other' => 'OTROS'];
