@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { Head, Link, usePage, router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
