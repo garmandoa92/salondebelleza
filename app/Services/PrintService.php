@@ -304,16 +304,12 @@ class PrintService
 
         // Items with code, qty x price format
         $itemsHtml = '';
-        $idx = 1;
         foreach ($invoice->sale?->items ?? [] as $item) {
-            $code = 'SRV-' . str_pad((string) $idx, 3, '0', STR_PAD_LEFT);
             $qty = number_format((float) $item->quantity, 2);
             $price = number_format((float) $item->unit_price, 2);
             $sub = number_format((float) $item->subtotal, 2);
             $itemsHtml .= '<div class="section-title">' . e($item->name) . '</div>'
-                . "<div>Codigo: {$code}</div>"
                 . "<div>{$qty} x \${$price} \${$sub}</div>";
-            $idx++;
         }
 
         // Totals breakdown
