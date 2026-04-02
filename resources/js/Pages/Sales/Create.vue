@@ -236,19 +236,7 @@ onMounted(() => {
 <template>
   <Head title="Nueva venta" />
 
-  <div class="flex flex-col h-[calc(100vh-4rem)]">
-    <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b bg-white shrink-0">
-      <div class="flex items-center gap-3">
-        <Link :href="`${base}/ventas`" class="text-gray-400 hover:text-gray-600">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </Link>
-        <h1 class="text-xl font-bold text-gray-900">Nueva venta</h1>
-        <Badge v-if="props.appointmentId" variant="secondary" class="text-xs">Desde cita</Badge>
-      </div>
-      <Link :href="`${base}/ventas`"><Button variant="outline" size="sm">Cancelar</Button></Link>
-    </div>
-
+  <div class="flex flex-col" style="height: calc(100vh - 4rem);">
     <!-- Content: two columns -->
     <div class="flex-1 overflow-hidden flex">
       <!-- LEFT COLUMN (scrollable) -->

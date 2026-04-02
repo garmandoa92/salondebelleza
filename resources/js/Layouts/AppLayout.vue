@@ -66,6 +66,7 @@ const initials = computed(() => {
 })
 
 const basePath = computed(() => `/salon/${tenant.value?.id}`)
+const isCheckoutPage = computed(() => page.component === 'Sales/Create')
 
 const navigation = computed(() => [
   { name: 'Dashboard', href: `${basePath.value}/dashboard`, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -215,23 +216,39 @@ onMounted(() => {
             </SheetContent>
           </Sheet>
 
-          <!-- Branch selector -->
-          <div v-if="hasBranches" class="ml-4">
-            <select
-              :value="currentBranchId || ''"
-              @change="switchBranch($event.target.value)"
-              class="h-8 rounded-md border border-input bg-transparent px-2 text-sm font-medium"
-            >
-              <option value="">Todas las sucursales</option>
-              <option v-for="b in branches" :key="b.id" :value="b.id">
-                {{ b.name }}{{ b.is_main ? ' (Matriz)' : '' }}
-              </option>
-            </select>
-          </div>
+          <!-- Checkout mode: custom topbar -->
+          <template v-if="isCheckoutPage">
+            <Link :href="`${basePath}/ventas`" class="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 ml-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              Ventas
+            </Link>
+            <div class="flex-1 text-center">
+              <span class="text-sm font-medium text-gray-900">Nueva venta</span>
+            </div>
+          </template>
 
-          <div class="flex-1" />
+          <!-- Normal mode: branch selector -->
+          <template v-else>
+            <div v-if="hasBranches" class="ml-4">
+              <select
+                :value="currentBranchId || ''"
+                @change="switchBranch($event.target.value)"
+                class="h-8 rounded-md border border-input bg-transparent px-2 text-sm font-medium"
+              >
+                <option value="">Todas las sucursales</option>
+                <option v-for="b in branches" :key="b.id" :value="b.id">
+                  {{ b.name }}{{ b.is_main ? ' (Matriz)' : '' }}
+                </option>
+              </select>
+            </div>
+            <div class="flex-1" />
+          </template>
 
           <div class="flex items-center gap-3">
+            <!-- Cancel button (checkout only) -->
+            <Link v-if="isCheckoutPage" :href="`${basePath}/ventas`">
+              <Button variant="outline" size="sm">Cancelar</Button>
+            </Link>
             <!-- Notifications -->
             <div class="relative">
               <Button variant="ghost" size="icon" @click="showNotifications = !showNotifications">
