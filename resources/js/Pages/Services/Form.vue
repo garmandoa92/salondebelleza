@@ -55,10 +55,10 @@ const durationPreview = computed(() => {
 
 const submit = () => {
   if (isEditing.value) {
-    form.post(`/salon/${tenantId}/servicios/${props.service.id}`, {
-      _method: 'put',
-      forceFormData: true,
-    })
+    form.transform((data) => ({ ...data, _method: 'PUT' }))
+      .post(`/salon/${tenantId}/servicios/${props.service.id}`, {
+        forceFormData: true,
+      })
   } else {
     form.post(`/salon/${tenantId}/servicios`, {
       forceFormData: true,
