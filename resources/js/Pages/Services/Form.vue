@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, useForm, usePage, Link } from '@inertiajs/vue3'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,9 +29,21 @@ const form = useForm({
   preparation_minutes: props.service?.preparation_minutes || 0,
   is_visible: props.service?.is_visible ?? true,
   requires_consultation: props.service?.requires_consultation ?? false,
+  iva_rate: props.service?.iva_rate,
   recipe: props.service?.recipe || [],
   image: null,
 })
+
+const globalIva = computed(() => page.props.tenantIva || 15)
+const ivaMode = ref(props.service?.iva_rate !== null && props.service?.iva_rate !== undefined ? 'custom' : 'global')
+const setIvaMode = (mode) => {
+  ivaMode.value = mode
+  form.iva_rate = mode === 'global' ? null : globalIva.value
+}
+const setCustomIva = (rate) => {
+  ivaMode.value = 'custom'
+  form.iva_rate = rate
+}
 
 const durationPreview = computed(() => {
   const m = parseInt(form.duration_minutes) || 0
@@ -146,6 +159,36 @@ const removeRecipeItem = (index) => {
               <input type="checkbox" v-model="form.requires_consultation" class="rounded border-gray-300" />
               <span class="text-sm">Requiere consulta previa</span>
             </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- IVA section -->
+      <Card>
+        <CardHeader><CardTitle class="text-base">Impuestos</CardTitle></CardHeader>
+        <CardContent class="space-y-3">
+          <div class="space-y-2">
+            <Label>Tarifa de IVA</Label>
+            <div class="space-y-2">
+              <label :class="['flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors', ivaMode === 'global' ? 'border-primary bg-primary/5' : 'border-gray-200']">
+                <input type="radio" name="iva_mode" :checked="ivaMode === 'global'" @change="setIvaMode('global')" class="text-primary" />
+                <span class="text-sm">Usar IVA global del salon ({{ globalIva }}%)</span>
+              </label>
+              <label :class="['flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors', ivaMode === 'custom' ? 'border-primary bg-primary/5' : 'border-gray-200']">
+                <input type="radio" name="iva_mode" :checked="ivaMode === 'custom'" @change="setIvaMode('custom')" class="text-primary" />
+                <span class="text-sm">IVA personalizado</span>
+              </label>
+            </div>
+            <div v-if="ivaMode === 'custom'" class="flex items-center gap-2 ml-6">
+              <Button v-for="r in [0, 12, 15]" :key="r" type="button" size="sm"
+                :variant="Number(form.iva_rate) === r ? 'default' : 'outline'" class="text-xs"
+                @click="setCustomIva(r)">{{ r }}%</Button>
+              <Input v-model="form.iva_rate" type="number" min="0" max="100" step="0.01" class="w-20 h-8 text-sm" />
+              <span class="text-sm text-gray-500">%</span>
+            </div>
+          </div>
+          <div v-if="ivaMode === 'custom' && Number(form.iva_rate) === 0" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+            Usa IVA 0% unicamente para servicios medico-esteticos con prescripcion medica. El uso incorrecto puede resultar en glosas del SRI. Consulta con tu contador.
           </div>
         </CardContent>
       </Card>

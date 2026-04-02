@@ -147,6 +147,7 @@ const addItem = (type, item) => {
     quantity: 1,
     unit_price: type === 'service' ? Number(item.base_price) : Number(item.sale_price),
     subtotal: type === 'service' ? Number(item.base_price) : Number(item.sale_price),
+    iva_rate: item.iva_rate ?? undefined, // null/undefined = global
     iva_amount: 0,
     discount_amount: 0,
     stylist_id: stylists.value[0]?.id || null,

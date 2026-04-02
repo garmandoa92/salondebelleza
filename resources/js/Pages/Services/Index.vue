@@ -108,6 +108,7 @@ const formatDuration = (mins) => {
                   <th class="pb-2 font-medium">Servicio</th>
                   <th class="pb-2 font-medium">Duracion</th>
                   <th class="pb-2 font-medium text-right">Precio</th>
+                  <th class="pb-2 font-medium text-center">IVA</th>
                   <th class="pb-2 font-medium text-center">Visible</th>
                   <th class="pb-2 font-medium text-right">Acciones</th>
                 </tr>
@@ -124,6 +125,11 @@ const formatDuration = (mins) => {
                   </td>
                   <td class="py-3 text-gray-600">{{ formatDuration(service.duration_minutes) }}</td>
                   <td class="py-3 text-right font-medium">${{ Number(service.base_price).toFixed(2) }}</td>
+                  <td class="py-3 text-center">
+                    <span v-if="service.iva_rate === null || service.iva_rate === undefined" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{{ $page.props.tenantIva || 15 }}% (global)</span>
+                    <span v-else-if="Number(service.iva_rate) === 0" class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">0%</span>
+                    <span v-else class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ service.iva_rate }}%</span>
+                  </td>
                   <td class="py-3 text-center">
                     <button
                       @click="toggleActive(service)"
