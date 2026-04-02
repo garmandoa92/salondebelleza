@@ -41,6 +41,12 @@ class HandleInertiaRequests extends Middleware
                 'trial_ends_at' => tenant()->trial_ends_at?->toISOString(),
                 'plan' => tenant()->plan?->name,
             ] : null,
+            'themeColors' => tenant() ? [
+                'primary' => tenant()->settings['primary_color'] ?? '#4A7C6F',
+                'accent' => tenant()->settings['accent_color'] ?? '#C9A96E',
+                'bg' => tenant()->settings['bg_color'] ?? '#F7F5F2',
+                'text' => tenant()->settings['text_color'] ?? '#2D3330',
+            ] : null,
             'branches' => $branches,
             'currentBranchId' => $currentBranchId,
             'flash' => [

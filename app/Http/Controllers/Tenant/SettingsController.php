@@ -56,6 +56,23 @@ class SettingsController extends Controller
         return back()->with('success', 'Datos del salon actualizados.');
     }
 
+    public function updateAppearance(Request $request)
+    {
+        $data = $request->validate([
+            'primary_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'bg_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'text_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $tenant = tenant();
+        $settings = $tenant->settings ?? [];
+        $settings = array_merge($settings, $data);
+        $tenant->update(['settings' => $settings]);
+
+        return back()->with('success', 'Apariencia actualizada.');
+    }
+
     public function updateSri(Request $request)
     {
         $data = $request->validate([

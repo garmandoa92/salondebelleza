@@ -34,6 +34,43 @@ const salonForm = useForm({
   inventory_mode: props.settings?.inventory_mode || 'centralized',
 })
 
+// Appearance
+const palettes = [
+  { name: 'Verde Salvia', primary: '#4A7C6F', accent: '#C9A96E', bg: '#F7F5F2', text: '#2D3330' },
+  { name: 'Rosa Polvos', primary: '#C4829A', accent: '#E8D5C4', bg: '#FDF8F5', text: '#3D2B33' },
+  { name: 'Azul Ceniza', primary: '#5B7FA6', accent: '#A8C4D4', bg: '#F5F7FA', text: '#2A3440' },
+  { name: 'Negro Dorado', primary: '#1A1A1A', accent: '#C9A96E', bg: '#F9F8F6', text: '#1A1A1A' },
+  { name: 'Lavanda', primary: '#7B6FA0', accent: '#C8B8E8', bg: '#F8F6FC', text: '#2D2840' },
+]
+const appearanceForm = useForm({
+  primary_color: props.settings?.primary_color || '#4A7C6F',
+  accent_color: props.settings?.accent_color || '#C9A96E',
+  bg_color: props.settings?.bg_color || '#F7F5F2',
+  text_color: props.settings?.text_color || '#2D3330',
+})
+const applyPalette = (p) => {
+  appearanceForm.primary_color = p.primary
+  appearanceForm.accent_color = p.accent
+  appearanceForm.bg_color = p.bg
+  appearanceForm.text_color = p.text
+  previewColors()
+}
+const previewColors = () => {
+  const root = document.documentElement
+  root.style.setProperty('--color-primary', appearanceForm.primary_color)
+  root.style.setProperty('--color-accent', appearanceForm.accent_color)
+  root.style.setProperty('--color-bg', appearanceForm.bg_color)
+  root.style.setProperty('--color-text', appearanceForm.text_color)
+  // Update shadcn primary
+  const hex = appearanceForm.primary_color
+  let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0, l = (max + min) / 2
+  if (max !== min) { const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min); if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6; else if (max === g) h = ((b - r) / d + 2) / 6; else h = ((r - g) / d + 4) / 6 }
+  root.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`)
+}
+const submitAppearance = () => appearanceForm.put(`${base}/settings/appearance`)
+
 // SRI form
 const sriForm = useForm({
   ambiente_sri: props.settings?.ambiente_sri || 'test',
@@ -127,6 +164,56 @@ const tabs = [
           </div>
           <Button type="submit" :disabled="salonForm.processing">Guardar</Button>
         </form>
+      </CardContent>
+    </Card>
+
+    <!-- Appearance (inside salon tab) -->
+    <Card v-if="activeTab === 'salon'">
+      <CardHeader><CardTitle class="text-base">Apariencia</CardTitle></CardHeader>
+      <CardContent class="space-y-4">
+        <p class="text-sm text-gray-500">Elige una paleta o personaliza los colores de tu salon.</p>
+
+        <div class="flex flex-wrap gap-2">
+          <button v-for="p in palettes" :key="p.name" @click="applyPalette(p)"
+            :class="['flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+              appearanceForm.primary_color === p.primary ? 'border-2 border-gray-900' : 'border-gray-200 hover:bg-gray-50']">
+            <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: p.primary }" />
+            <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: p.accent }" />
+            <span class="text-xs">{{ p.name }}</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 max-w-md">
+          <div class="space-y-1">
+            <Label class="text-xs">Color primario</Label>
+            <div class="flex items-center gap-2">
+              <input type="color" v-model="appearanceForm.primary_color" @input="previewColors" class="h-9 w-12 rounded border cursor-pointer" />
+              <Input v-model="appearanceForm.primary_color" class="flex-1 text-xs font-mono" @input="previewColors" />
+            </div>
+          </div>
+          <div class="space-y-1">
+            <Label class="text-xs">Color acento</Label>
+            <div class="flex items-center gap-2">
+              <input type="color" v-model="appearanceForm.accent_color" @input="previewColors" class="h-9 w-12 rounded border cursor-pointer" />
+              <Input v-model="appearanceForm.accent_color" class="flex-1 text-xs font-mono" @input="previewColors" />
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg p-4 space-y-2" :style="{ backgroundColor: appearanceForm.bg_color }">
+          <p class="text-xs text-gray-400">Vista previa</p>
+          <div class="flex gap-2">
+            <button class="px-4 py-2 rounded-md text-white text-sm font-medium" :style="{ backgroundColor: appearanceForm.primary_color }">Boton primario</button>
+            <button class="px-4 py-2 rounded-md text-white text-sm font-medium" :style="{ backgroundColor: appearanceForm.accent_color }">Acento</button>
+          </div>
+          <div class="flex gap-3 text-sm">
+            <span class="font-medium" :style="{ color: appearanceForm.text_color }">Texto normal</span>
+            <span class="font-medium" :style="{ color: appearanceForm.primary_color }">Link primario</span>
+            <span class="font-medium" :style="{ color: appearanceForm.accent_color }">Acento</span>
+          </div>
+        </div>
+
+        <Button @click="submitAppearance" :disabled="appearanceForm.processing">Guardar apariencia</Button>
       </CardContent>
     </Card>
 

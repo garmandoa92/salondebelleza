@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watchEffect } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,37 @@ const hasBranches = computed(() => branches.value.length > 1)
 
 const switchBranch = (branchId) => {
   router.post(`${basePath.value}/sucursales/switch`, { branch_id: branchId || null })
+}
+
+// Theme colors
+const themeColors = computed(() => page.props.themeColors)
+watchEffect(() => {
+  const c = themeColors.value
+  if (!c) return
+  const root = document.documentElement
+  root.style.setProperty('--color-primary', c.primary)
+  root.style.setProperty('--color-accent', c.accent)
+  root.style.setProperty('--color-bg', c.bg)
+  root.style.setProperty('--color-text', c.text)
+  // Generate HSL for shadcn-vue primary override
+  root.style.setProperty('--primary', hexToHsl(c.primary))
+  root.style.setProperty('--primary-foreground', '0 0% 100%')
+})
+
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255
+  let g = parseInt(hex.slice(3, 5), 16) / 255
+  let b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0, l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
 }
 
 const initials = computed(() => {
