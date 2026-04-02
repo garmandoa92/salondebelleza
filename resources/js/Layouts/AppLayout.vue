@@ -162,30 +162,15 @@ onMounted(() => {
         </button>
       </div>
 
-      <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      <nav class="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         <Link
           v-for="item in navigation"
           :key="item.name"
           :href="item.href"
-          :class="[
-            'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]',
-            $page.url.startsWith(item.href)
-              ? isDarkPrimary
-                ? 'bg-white/15 text-white border-white/60'
-                : 'text-[var(--color-primary)] border-[var(--color-primary)]'
-              : isDarkPrimary
-                ? 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
-                : 'text-gray-600 hover:text-gray-900 border-transparent'
-          ]"
-          :style="$page.url.startsWith(item.href) && !isDarkPrimary ? { backgroundColor: 'var(--color-primary-10)' } : !$page.url.startsWith(item.href) && !isDarkPrimary ? { '--tw-bg-opacity': 1 } : {}"
-          @mouseenter="!$page.url.startsWith(item.href) && !isDarkPrimary && ($event.currentTarget.style.backgroundColor = 'var(--color-primary-5)')"
-          @mouseleave="!$page.url.startsWith(item.href) && !isDarkPrimary && ($event.currentTarget.style.backgroundColor = '')"
+          class="sidebar-item flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors border-l-[3px]"
+          :class="$page.url.startsWith(item.href) ? 'sidebar-active' : 'sidebar-inactive'"
         >
-          <svg class="w-5 h-5 flex-shrink-0"
-            :class="$page.url.startsWith(item.href)
-              ? isDarkPrimary ? 'text-white' : 'text-[var(--color-primary)]'
-              : isDarkPrimary ? 'text-white/50' : 'text-gray-400'"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
           </svg>
           <span v-if="sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>

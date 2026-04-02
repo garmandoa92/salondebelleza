@@ -76,6 +76,34 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: #F4F7F5;
+  }
+}
+
+@layer components {
+  /* Sidebar nav items — use CSS vars for dynamic theme */
+  .sidebar-active {
+    background-color: var(--color-primary-10);
+    color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    font-weight: 500;
+  }
+  .sidebar-active svg {
+    color: var(--color-primary);
+  }
+  .sidebar-inactive {
+    color: #666666;
+    border-left-color: transparent;
+  }
+  .sidebar-inactive svg {
+    color: #999999;
+  }
+  .sidebar-inactive:hover {
+    background-color: var(--color-primary-5);
+    color: #333333;
+  }
+  .sidebar-inactive:hover svg {
+    color: #666666;
   }
 }

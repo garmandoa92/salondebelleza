@@ -47,8 +47,8 @@ const statusColors = {
         <p class="text-sm text-gray-500">{{ new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
       </div>
       <div class="flex gap-2">
-        <Link :href="`${base}/agenda`"><Button variant="outline" size="sm">Ir a agenda</Button></Link>
-        <Link :href="`${base}/ventas`"><Button variant="outline" size="sm">Ver caja</Button></Link>
+        <Link :href="`${base}/agenda`"><Button variant="outline" size="sm" class="border-[1.5px] border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-5)]">Ir a agenda</Button></Link>
+        <Link :href="`${base}/ventas`"><Button size="sm">Ver caja</Button></Link>
       </div>
     </div>
 
