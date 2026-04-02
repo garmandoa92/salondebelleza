@@ -18,8 +18,8 @@ class SriSignatureService
             return $xml;
         }
 
-        $certs = [];
-        if (! openssl_pkcs12_read($p12Content, $certs, $p12Password)) {
+        $certs = SriCertificateReader::read($p12Content, $p12Password);
+        if ($certs === false) {
             throw new \RuntimeException('No se pudo leer el certificado .p12. Verifique la contrasena.');
         }
 

@@ -102,9 +102,9 @@ class SettingsController extends Controller
         $file = $request->file('certificate');
         $content = file_get_contents($file->getRealPath());
 
-        // Validate the .p12 can be read
-        $certs = [];
-        if (! openssl_pkcs12_read($content, $certs, $request->certificate_password)) {
+        // Validate the .p12 can be read (supports legacy SRI algorithms)
+        $certs = \App\Services\Sri\SriCertificateReader::read($content, $request->certificate_password);
+        if ($certs === false) {
             return back()->withErrors(['certificate' => 'No se pudo leer el certificado. Verifique la contrasena.']);
         }
 
