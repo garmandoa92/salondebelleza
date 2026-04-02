@@ -25,6 +25,7 @@ class Client extends Model
         'preferred_stylist_id',
         'loyalty_points',
         'total_spent',
+        'balance',
         'visit_count',
         'last_visit_at',
         'source',
@@ -38,6 +39,7 @@ class Client extends Model
             'tags' => 'array',
             'loyalty_points' => 'integer',
             'total_spent' => 'decimal:2',
+            'balance' => 'decimal:2',
             'visit_count' => 'integer',
             'last_visit_at' => 'datetime',
             'source' => ClientSource::class,
@@ -63,5 +65,10 @@ class Client extends Model
     public function preferredStylist()
     {
         return $this->belongsTo(Stylist::class, 'preferred_stylist_id');
+    }
+
+    public function advances()
+    {
+        return $this->hasMany(ClientAdvance::class);
     }
 }

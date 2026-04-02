@@ -13,6 +13,7 @@ const props = defineProps({
   today_agenda: Array,
   month: Object,
   alerts: Object,
+  pending_advances: Object,
 })
 
 const page = usePage()
@@ -165,6 +166,23 @@ const statusColors = {
                   <span class="text-xs text-gray-500">${{ Number(svc.total).toFixed(0) }}</span>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Pending Advances -->
+        <Card v-if="pending_advances?.count > 0">
+          <CardHeader class="pb-2"><CardTitle class="text-base">Anticipos pendientes</CardTitle></CardHeader>
+          <CardContent class="space-y-2">
+            <p class="text-sm text-gray-500">{{ pending_advances.count }} anticipos · ${{ Number(pending_advances.total).toFixed(2) }} total</p>
+            <div v-for="adv in pending_advances.items" :key="adv.id" class="flex items-center justify-between text-sm py-1 border-b last:border-0">
+              <div>
+                <p class="font-medium">{{ adv.client?.first_name }} {{ adv.client?.last_name }}</p>
+                <p v-if="adv.appointment?.starts_at" class="text-xs text-gray-400">
+                  {{ new Date(adv.appointment.starts_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) }}
+                </p>
+              </div>
+              <span class="font-bold text-green-600">${{ Number(adv.amount).toFixed(2) }}</span>
             </div>
           </CardContent>
         </Card>

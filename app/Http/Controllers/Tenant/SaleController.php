@@ -89,10 +89,20 @@ class SaleController extends Controller
             'payment_methods' => ['required', 'array', 'min:1'],
             'payment_methods.*.method' => ['required', 'string'],
             'payment_methods.*.amount' => ['required', 'numeric', 'min:0'],
+            'advance_applied' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $data['branch_id'] = session('current_branch_id');
         $sale = $this->saleService->createFromCheckout($data, auth()->id());
+
+        // Apply client balance if requested
+        if ($request->filled('advance_applied') && (float) $request->advance_applied > 0 && $data['client_id']) {
+            $client = \App\Models\Client::find($data['client_id']);
+            if ($client && (float) $client->balance > 0) {
+                $applyAmount = min((float) $request->advance_applied, (float) $client->balance);
+                (new \App\Services\AdvanceService())->applyBalanceToSale($client, $sale, $applyAmount);
+            }
+        }
 
         return response()->json(['success' => true, 'sale_id' => $sale->id]);
     }

@@ -93,12 +93,14 @@ class AppointmentController extends Controller
     public function show(Appointment $appointment)
     {
         $appointment->load([
-            'client:id,first_name,last_name,phone,email,allergies,tags,visit_count,last_visit_at,total_spent',
+            'client:id,first_name,last_name,phone,email,allergies,tags,visit_count,last_visit_at,total_spent,balance',
             'stylist:id,name,color,phone',
             'service:id,name,base_price,duration_minutes,service_category_id',
             'service.category:id,name,color',
             'creator:id,name',
         ]);
+
+        $appointment->setAttribute('advances', \App\Models\ClientAdvance::where('appointment_id', $appointment->id)->get());
 
         return response()->json($appointment);
     }

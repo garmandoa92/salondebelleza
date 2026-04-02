@@ -95,6 +95,15 @@ class DashboardController extends Controller
             $q->where('last_visit_at', '<', now()->subDays(60))->orWhereNull('last_visit_at');
         })->where('is_active', true)->count();
 
+        // Pending advances
+        $pendingAdvances = \App\Models\ClientAdvance::where('status', 'pending')
+            ->with(['client:id,first_name,last_name', 'appointment:id,starts_at'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+        $pendingAdvancesTotal = \App\Models\ClientAdvance::where('status', 'pending')->sum('amount');
+        $pendingAdvancesCount = \App\Models\ClientAdvance::where('status', 'pending')->count();
+
         return Inertia::render('Tenant/Dashboard', [
             'kpis' => [
                 'revenue_today' => round((float) $revenueToday, 2),
@@ -117,6 +126,11 @@ class DashboardController extends Controller
                 'rejected_invoices' => $rejectedInvoices,
                 'unconfirmed' => $unconfirmedAppointments,
                 'inactive_clients' => $inactiveClients,
+            ],
+            'pending_advances' => [
+                'count' => $pendingAdvancesCount,
+                'total' => round((float) $pendingAdvancesTotal, 2),
+                'items' => $pendingAdvances,
             ],
         ]);
     }

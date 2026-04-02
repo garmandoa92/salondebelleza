@@ -20,17 +20,56 @@ const props = defineProps({
 
 const page = usePage()
 const tenantId = page.props.tenant?.id
+const base = `/salon/${tenantId}`
 const activeTab = ref('historial')
 const clientPackages = ref([])
+const advances = ref([])
+const clientBalance = ref(Number(props.client.balance) || 0)
 
 const loadPackages = async () => {
   try {
-    const { data } = await axios.get(`/salon/${tenantId}/packages/client/${props.client.id}`)
+    const { data } = await axios.get(`${base}/packages/client/${props.client.id}`)
     clientPackages.value = data
   } catch {}
 }
 
-onMounted(() => loadPackages())
+const loadAdvances = async () => {
+  try {
+    const { data } = await axios.get(`${base}/advances/client/${props.client.id}`)
+    advances.value = data.advances
+    clientBalance.value = Number(data.balance) || 0
+  } catch {}
+}
+
+// Advance modal
+const showAdvanceModal = ref(false)
+const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
+const savingAdvance = ref(false)
+
+const submitAdvance = async () => {
+  savingAdvance.value = true
+  try {
+    await axios.post(`${base}/advances`, {
+      client_id: props.client.id,
+      type: 'advance',
+      amount: Number(advanceForm.value.amount),
+      payment_method: advanceForm.value.payment_method,
+      reference: advanceForm.value.reference || null,
+      notes: advanceForm.value.notes || null,
+    })
+    showAdvanceModal.value = false
+    advanceForm.value = { amount: '', payment_method: 'cash', reference: '', notes: '' }
+    loadAdvances()
+  } finally { savingAdvance.value = false }
+}
+
+const refundAdvance = async (id) => {
+  if (!confirm('Devolver este anticipo?')) return
+  await axios.post(`${base}/advances/${id}/refund`, { notes: 'Devolucion desde ficha cliente' })
+  loadAdvances()
+}
+
+onMounted(() => { loadPackages(); loadAdvances() })
 
 const initials = ((props.client.first_name?.[0] || '') + (props.client.last_name?.[0] || '')).toUpperCase()
 
@@ -121,6 +160,13 @@ const daysToBirthday = () => {
             </div>
           </div>
 
+          <!-- Balance -->
+          <div v-if="clientBalance > 0" class="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p class="text-xs text-green-600 mb-1">Saldo a favor</p>
+            <p class="text-xl font-bold text-green-700">${{ clientBalance.toFixed(2) }}</p>
+            <button @click="activeTab = 'saldo'" class="text-xs text-green-600 hover:underline mt-1">Ver movimientos</button>
+          </div>
+
           <!-- Allergies alert -->
           <div v-if="client.allergies" class="bg-red-50 border border-red-200 rounded-lg p-3">
             <p class="text-xs font-medium text-red-700 flex items-center gap-1">⚠ Alergias</p>
@@ -160,7 +206,7 @@ const daysToBirthday = () => {
         <!-- Tab nav -->
         <div class="flex border-b">
           <button
-            v-for="tab in [{ key: 'historial', label: 'Historial' }, { key: 'compras', label: 'Compras' }, { key: 'paquetes', label: 'Paquetes' }, { key: 'futuras', label: 'Citas futuras' }]"
+            v-for="tab in [{ key: 'historial', label: 'Historial' }, { key: 'compras', label: 'Compras' }, { key: 'saldo', label: 'Saldo' }, { key: 'paquetes', label: 'Paquetes' }, { key: 'futuras', label: 'Citas futuras' }]"
             :key="tab.key"
             @click="activeTab = tab.key"
             :class="['px-4 py-2 text-sm font-medium border-b-2 transition-colors',
@@ -210,6 +256,99 @@ const daysToBirthday = () => {
             <p v-else class="text-sm text-gray-400 text-center py-6">Sin compras registradas</p>
           </CardContent>
         </Card>
+
+        <!-- Tab: Saldo -->
+        <Card v-if="activeTab === 'saldo'">
+          <CardHeader>
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-base">Saldo y anticipos</CardTitle>
+              <Button size="sm" @click="showAdvanceModal = true">+ Registrar anticipo</Button>
+            </div>
+          </CardHeader>
+          <CardContent class="pt-0">
+            <div v-if="advances.length" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b text-left text-gray-500 text-xs">
+                    <th class="pb-2 font-medium">Fecha</th>
+                    <th class="pb-2 font-medium">Tipo</th>
+                    <th class="pb-2 font-medium text-right">Monto</th>
+                    <th class="pb-2 font-medium">Metodo</th>
+                    <th class="pb-2 font-medium">Cita</th>
+                    <th class="pb-2 font-medium text-center">Estado</th>
+                    <th class="pb-2 font-medium text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="a in advances" :key="a.id" class="border-b last:border-0">
+                    <td class="py-2 text-gray-600">{{ new Date(a.created_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) }}</td>
+                    <td class="py-2">
+                      <Badge :class="a.type === 'advance' ? 'bg-blue-100 text-blue-700' : a.type === 'payment' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="text-xs">
+                        {{ a.type === 'advance' ? 'Anticipo' : a.type === 'payment' ? 'Abono' : 'Devolucion' }}
+                      </Badge>
+                    </td>
+                    <td class="py-2 text-right font-medium" :class="a.type === 'refund' ? 'text-red-600' : 'text-green-600'">
+                      {{ a.type === 'refund' ? '-' : '+' }}${{ Number(a.amount).toFixed(2) }}
+                    </td>
+                    <td class="py-2 text-gray-500 text-xs">
+                      {{ { cash: 'Efectivo', transfer: 'Transferencia', card_debit: 'T. Debito', card_credit: 'T. Credito', other: 'Otro' }[a.payment_method?.value || a.payment_method] || '-' }}
+                    </td>
+                    <td class="py-2 text-xs text-gray-500">{{ a.appointment?.service?.name || '-' }}</td>
+                    <td class="py-2 text-center">
+                      <Badge :class="a.status === 'pending' || a.status?.value === 'pending' ? 'bg-amber-100 text-amber-700' : (a.status === 'applied' || a.status?.value === 'applied') ? 'bg-gray-100 text-gray-500' : 'bg-red-100 text-red-700'" class="text-xs">
+                        {{ { pending: 'Pendiente', applied: 'Aplicado', refunded: 'Devuelto' }[a.status?.value || a.status] }}
+                      </Badge>
+                    </td>
+                    <td class="py-2 text-right">
+                      <Button v-if="(a.status?.value || a.status) === 'pending'" variant="ghost" size="sm" class="text-xs text-red-500" @click="refundAdvance(a.id)">
+                        Devolver
+                      </Button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-else class="text-sm text-gray-400 text-center py-6">Sin movimientos de anticipos</p>
+            <div v-if="advances.length" class="border-t pt-3 mt-3 flex justify-between items-center">
+              <span class="text-sm text-gray-500">Saldo actual:</span>
+              <span class="text-lg font-bold text-green-700">${{ clientBalance.toFixed(2) }}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Advance modal for client page -->
+        <div v-if="showAdvanceModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" @click.self="showAdvanceModal = false">
+          <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-5 space-y-4">
+            <h3 class="text-lg font-bold">Registrar anticipo</h3>
+            <p class="text-sm text-gray-500">Cliente: {{ client.first_name }} {{ client.last_name }}</p>
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <label class="text-sm font-medium">Monto</label>
+                <input v-model="advanceForm.amount" type="number" min="0.01" step="0.01" placeholder="$0.00"
+                  class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+              </div>
+              <div class="space-y-1">
+                <label class="text-sm font-medium">Metodo de pago</label>
+                <select v-model="advanceForm.payment_method" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                  <option value="cash">Efectivo</option>
+                  <option value="transfer">Transferencia</option>
+                  <option value="card_debit">T. Debito</option>
+                  <option value="card_credit">T. Credito</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-sm font-medium">Referencia</label>
+                <input v-model="advanceForm.reference" placeholder="Opcional" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+              </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+              <Button variant="outline" class="flex-1" @click="showAdvanceModal = false">Cancelar</Button>
+              <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="savingAdvance || !advanceForm.amount" @click="submitAdvance">
+                {{ savingAdvance ? 'Guardando...' : `Registrar $${Number(advanceForm.amount || 0).toFixed(2)}` }}
+              </Button>
+            </div>
+          </div>
+        </div>
 
         <!-- Tab: Paquetes -->
         <Card v-if="activeTab === 'paquetes'">
