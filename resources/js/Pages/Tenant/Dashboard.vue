@@ -32,9 +32,41 @@ const confirmAppointment = async (id) => {
   router.reload()
 }
 
-const statusColors = {
-  pending: 'bg-gray-300', confirmed: 'bg-blue-400', in_progress: 'bg-green-400', completed: 'bg-green-600',
+const startAppointment = async (id) => {
+  await axios.post(`${base}/agenda/appointments/${id}/start`)
+  router.reload()
 }
+
+const completeAppointment = async (id) => {
+  await axios.post(`${base}/agenda/appointments/${id}/complete`)
+  router.reload()
+}
+
+const goCheckout = (aptId) => {
+  router.visit(`${base}/ventas/nueva?appointment_id=${aptId}`)
+}
+
+const aptStatus = (apt) => apt.status?.value || apt.status || 'pending'
+
+const statusBadge = (s) => ({
+  pending: 'bg-[#FFF3E0] text-[#E65100]',
+  confirmed: 'bg-[#E3F2FD] text-[#1565C0]',
+  in_progress: 'bg-[#E8F5E9] text-[#2E7D32]',
+  completed: 'bg-[#E8F4F0] text-[#0F6E56]',
+}[s] || 'bg-gray-100 text-gray-600')
+
+const statusLabel = (s) => ({
+  pending: 'Pendiente', confirmed: 'Confirmada', in_progress: 'En curso', completed: 'Completada',
+}[s] || s)
+
+const isNow = (apt) => {
+  const now = new Date()
+  const start = new Date(apt.starts_at)
+  const end = new Date(apt.ends_at)
+  return now >= start && now <= end
+}
+
+const totalCitas = computed(() => (props.today_agenda || []).reduce((s, st) => s + (st.appointments?.length || 0), 0))
 </script>
 
 <template>
@@ -93,40 +125,63 @@ const statusColors = {
         <Card>
           <CardHeader class="pb-3">
             <div class="flex items-center justify-between">
-              <CardTitle class="text-base">Agenda de hoy</CardTitle>
-              <Link :href="`${base}/agenda`"><Button variant="ghost" size="sm" class="text-xs">Ver completa</Button></Link>
+              <div class="flex items-center gap-2">
+                <CardTitle class="text-base font-medium">Agenda de hoy</CardTitle>
+                <span v-if="totalCitas" class="text-[11px] font-semibold px-2 py-0.5 rounded-full kpi-card-light kpi-value-primary">{{ totalCitas }} citas</span>
+              </div>
+              <Link :href="`${base}/agenda`" class="text-sm font-medium hover:underline" style="color: var(--color-primary);">Ver completa</Link>
             </div>
           </CardHeader>
-          <CardContent>
-            <div v-if="today_agenda?.length" class="space-y-4">
-              <div v-for="stylist in today_agenda" :key="stylist.id">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: stylist.color }" />
-                  <span class="text-sm font-medium">{{ stylist.name }}</span>
-                  <Badge variant="secondary" class="text-[10px]">{{ stylist.appointments?.length || 0 }}</Badge>
-                </div>
-                <div v-if="stylist.appointments?.length" class="space-y-1 ml-5">
-                  <div
-                    v-for="apt in stylist.appointments"
-                    :key="apt.id"
-                    class="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-gray-50"
-                  >
+          <CardContent class="space-y-2">
+            <template v-if="today_agenda?.length">
+              <template v-for="stylist in today_agenda" :key="stylist.id">
+                <!-- Stylist with appointments -->
+                <div v-if="stylist.appointments?.length" class="bg-gray-50/80 rounded-xl overflow-hidden">
+                  <!-- Stylist header -->
+                  <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
                     <div class="flex items-center gap-2">
-                      <span :class="['w-1.5 h-1.5 rounded-full', statusColors[apt.status?.value || apt.status]]" />
-                      <span class="text-gray-500 font-mono text-xs">{{ formatTime(apt.starts_at) }}</span>
-                      <span class="font-medium">{{ apt.client?.first_name }} {{ apt.client?.last_name }}</span>
-                      <span class="text-gray-400 text-xs">{{ apt.service?.name }}</span>
+                      <span class="w-3 h-3 rounded-full ring-2 ring-white" :style="{ backgroundColor: stylist.color }" />
+                      <span class="text-sm font-semibold text-gray-900">{{ stylist.name }}</span>
                     </div>
-                    <Button
-                      v-if="(apt.status?.value || apt.status) === 'pending'"
-                      variant="ghost" size="sm" class="text-xs text-green-600 h-6"
-                      @click="confirmAppointment(apt.id)"
-                    >Confirmar</Button>
+                    <span class="text-[11px] text-gray-500">{{ stylist.appointments.length }} cita{{ stylist.appointments.length > 1 ? 's' : '' }}</span>
+                  </div>
+                  <!-- Appointments -->
+                  <div class="divide-y divide-gray-100">
+                    <div
+                      v-for="apt in stylist.appointments"
+                      :key="apt.id"
+                      :class="['px-4 py-3 transition-colors', aptStatus(apt) === 'in_progress' ? 'bg-[#F4F9F7] border-l-[3px]' : 'border-l-[3px] border-l-transparent']"
+                      :style="aptStatus(apt) === 'in_progress' ? { borderLeftColor: 'var(--color-primary)' } : {}"
+                    >
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-0.5">
+                            <span class="text-sm font-bold" style="color: var(--color-primary);">{{ formatTime(apt.starts_at) }}</span>
+                            <span v-if="isNow(apt)" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500 text-white uppercase">Ahora</span>
+                          </div>
+                          <p class="text-sm font-semibold text-gray-900">{{ apt.client?.first_name }} {{ apt.client?.last_name }}</p>
+                          <p class="text-xs text-gray-500">{{ apt.service?.name }}</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <span :class="[statusBadge(aptStatus(apt)), 'text-[10px] font-semibold px-2 py-0.5 rounded-full']">{{ statusLabel(aptStatus(apt)) }}</span>
+                          <Button v-if="aptStatus(apt) === 'pending'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-blue-600" @click="confirmAppointment(apt.id)">Confirmar</Button>
+                          <Button v-if="aptStatus(apt) === 'confirmed'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-green-600" @click="startAppointment(apt.id)">Llego</Button>
+                          <Button v-if="aptStatus(apt) === 'in_progress'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-green-700" @click="completeAppointment(apt.id)">Completar</Button>
+                          <Button v-if="aptStatus(apt) === 'in_progress' || (aptStatus(apt) === 'completed' && apt.payment_status !== 'paid')" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-amber-600" @click="goCheckout(apt.id)">Cobrar</Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <p v-else class="text-xs text-gray-400 ml-5">Sin citas</p>
-              </div>
-            </div>
+
+                <!-- Stylist without appointments (compact) -->
+                <div v-else class="flex items-center gap-2 px-4 py-2 text-gray-400">
+                  <span class="w-2.5 h-2.5 rounded-full opacity-40" :style="{ backgroundColor: stylist.color }" />
+                  <span class="text-sm">{{ stylist.name }}</span>
+                  <span class="text-xs">— Sin citas hoy</span>
+                </div>
+              </template>
+            </template>
             <p v-else class="text-sm text-gray-400 text-center py-6">Sin citas para hoy</p>
           </CardContent>
         </Card>
