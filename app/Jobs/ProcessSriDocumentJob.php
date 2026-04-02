@@ -52,6 +52,11 @@ class ProcessSriDocumentJob implements ShouldQueue
             $p12Password = null;
             $settings = $this->tenantConfig;
 
+            Log::info('SRI Paso 2: Certificado check', [
+                'has_sri_certificate' => isset($settings['sri_certificate']),
+                'cert_length' => strlen($settings['sri_certificate'] ?? ''),
+            ]);
+
             if (! empty($settings['sri_certificate'])) {
                 try {
                     $p12Content = base64_decode(Crypt::decrypt($settings['sri_certificate']));
