@@ -27,20 +27,30 @@ class SriXmlGenerator
         $doc = new DOMDocument('1.0', 'UTF-8');
         $doc->formatOutput = true;
 
+        $invoiceType = $invoice->invoice_type instanceof \BackedEnum ? $invoice->invoice_type->value : $invoice->invoice_type;
+        $codDoc = match ($invoiceType) {
+            'invoice' => '01',
+            'sale_note' => '01', // Notas de venta usan factura (codDoc 01) en Ecuador
+            'credit_note' => '04',
+            'debit_note' => '05',
+            default => '01',
+        };
+
         $root = $doc->createElement('factura');
         $root->setAttribute('id', 'comprobante');
-        $root->setAttribute('version', '2.1.0');
+        $root->setAttribute('version', '1.1.0');
         $doc->appendChild($root);
 
         // infoTributaria
         $infoTrib = $doc->createElement('infoTributaria');
-        $this->addElement($doc, $infoTrib, 'ambiente', $invoice->environment->value === 'production' ? '2' : '1');
+        $env = $invoice->environment instanceof \BackedEnum ? $invoice->environment->value : $invoice->environment;
+        $this->addElement($doc, $infoTrib, 'ambiente', $env === 'production' ? '2' : '1');
         $this->addElement($doc, $infoTrib, 'tipoEmision', '1');
         $this->addElement($doc, $infoTrib, 'razonSocial', $tenantConfig['razon_social'] ?? 'SALON');
         $this->addElement($doc, $infoTrib, 'nombreComercial', $tenantConfig['nombre_comercial'] ?? $tenantConfig['razon_social'] ?? 'SALON');
         $this->addElement($doc, $infoTrib, 'ruc', $tenantConfig['ruc'] ?? '0000000000001');
         $this->addElement($doc, $infoTrib, 'claveAcceso', $invoice->access_key);
-        $this->addElement($doc, $infoTrib, 'codDoc', '01');
+        $this->addElement($doc, $infoTrib, 'codDoc', $codDoc);
         $this->addElement($doc, $infoTrib, 'estab', $invoice->establishment);
         $this->addElement($doc, $infoTrib, 'ptoEmi', $invoice->emission_point);
         $this->addElement($doc, $infoTrib, 'secuencial', $invoice->sequential);

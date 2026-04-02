@@ -3,13 +3,15 @@
 namespace App\Services\Sri;
 
 use Illuminate\Support\Facades\Log;
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 use Symfony\Component\Process\Process;
 
 class SriSignatureService
 {
     /**
-     * Sign XML with XAdES-BES using .p12 certificate.
-     * Uses openssl CLI with -legacy flag for SRI Ecuador certificates.
+     * Sign XML with XAdES-BES for SRI Ecuador.
+     * Uses robrichards/xmlseclibs + openssl CLI for legacy .p12 extraction.
      */
     public function sign(string $xml, ?string $p12Content = null, ?string $p12Password = null): string
     {
@@ -21,68 +23,24 @@ class SriSignatureService
         $tmpP12 = tempnam(sys_get_temp_dir(), 'sri_p12_');
         $tmpKey = tempnam(sys_get_temp_dir(), 'sri_key_');
         $tmpCert = tempnam(sys_get_temp_dir(), 'sri_cert_');
-        $tmpXml = tempnam(sys_get_temp_dir(), 'sri_xml_');
-        $tmpSigned = tempnam(sys_get_temp_dir(), 'sri_signed_');
 
         try {
             file_put_contents($tmpP12, $p12Content);
-            file_put_contents($tmpXml, $xml);
 
-            // Extract private key with -legacy
-            $keyProcess = new Process([
-                'openssl', 'pkcs12', '-legacy',
-                '-in', $tmpP12, '-passin', 'pass:' . $p12Password,
-                '-nocerts', '-nodes', '-out', $tmpKey,
-            ]);
-            $keyProcess->run();
+            // Extract private key with -legacy for SRI Ecuador certificates
+            $this->extractWithOpenssl($tmpP12, $p12Password, $tmpKey, $tmpCert);
 
-            if (! $keyProcess->isSuccessful()) {
-                // Retry without -legacy
-                $keyProcess2 = new Process([
-                    'openssl', 'pkcs12',
-                    '-in', $tmpP12, '-passin', 'pass:' . $p12Password,
-                    '-nocerts', '-nodes', '-out', $tmpKey,
-                ]);
-                $keyProcess2->run();
-                if (! $keyProcess2->isSuccessful()) {
-                    throw new \RuntimeException('Error extrayendo clave privada: ' . $keyProcess2->getErrorOutput());
-                }
-            }
+            $privateKeyPem = file_get_contents($tmpKey);
+            $certPem = file_get_contents($tmpCert);
 
-            // Extract certificate with -legacy
-            $certProcess = new Process([
-                'openssl', 'pkcs12', '-legacy',
-                '-in', $tmpP12, '-passin', 'pass:' . $p12Password,
-                '-nokeys', '-clcerts', '-out', $tmpCert,
-            ]);
-            $certProcess->run();
-
-            if (! $certProcess->isSuccessful()) {
-                $certProcess2 = new Process([
-                    'openssl', 'pkcs12',
-                    '-in', $tmpP12, '-passin', 'pass:' . $p12Password,
-                    '-nokeys', '-clcerts', '-out', $tmpCert,
-                ]);
-                $certProcess2->run();
-            }
-
-            $privateKey = file_get_contents($tmpKey);
-            $certificate = file_get_contents($tmpCert);
-
-            if (empty($privateKey) || empty($certificate)) {
+            if (empty($privateKeyPem) || empty($certPem)) {
                 throw new \RuntimeException('Certificado o llave vacios al firmar');
             }
 
-            // Sign XML with xmlsec1 if available, otherwise use PHP native
-            $signedXml = $this->signWithXmlsec($tmpXml, $tmpKey, $tmpCert, $tmpSigned);
-            if ($signedXml) {
-                Log::info('SRI Firma: XML firmado con xmlsec1');
-                return $signedXml;
-            }
+            // Sign with XAdES-BES using xmlseclibs
+            $signedXml = $this->signXadesBes($xml, $privateKeyPem, $certPem);
 
-            // Fallback: PHP native enveloped signature
-            $signedXml = $this->signWithPhp($xml, $privateKey, $certificate);
-            Log::info('SRI Firma: XML firmado con PHP nativo');
+            Log::info('SRI Firma: XML firmado con XAdES-BES');
             return $signedXml;
 
         } catch (\Throwable $e) {
@@ -92,95 +50,133 @@ class SriSignatureService
             @unlink($tmpP12);
             @unlink($tmpKey);
             @unlink($tmpCert);
-            @unlink($tmpXml);
-            @unlink($tmpSigned);
         }
     }
 
-    private function signWithXmlsec(string $xmlPath, string $keyPath, string $certPath, string $outputPath): ?string
+    private function extractWithOpenssl(string $p12Path, string $password, string $keyPath, string $certPath): void
     {
-        // Check if xmlsec1 is available
-        $check = new Process(['which', 'xmlsec1']);
-        $check->run();
-        if (! $check->isSuccessful()) {
-            return null;
+        // Extract private key
+        $keyProc = new Process(['openssl', 'pkcs12', '-legacy', '-in', $p12Path, '-passin', 'pass:' . $password, '-nocerts', '-nodes', '-out', $keyPath]);
+        $keyProc->run();
+        if (! $keyProc->isSuccessful()) {
+            // Retry without -legacy
+            $keyProc2 = new Process(['openssl', 'pkcs12', '-in', $p12Path, '-passin', 'pass:' . $password, '-nocerts', '-nodes', '-out', $keyPath]);
+            $keyProc2->run();
+            if (! $keyProc2->isSuccessful()) {
+                throw new \RuntimeException('Error extrayendo clave: ' . $keyProc2->getErrorOutput());
+            }
         }
 
-        $process = new Process([
-            'xmlsec1', '--sign',
-            '--privkey-pem', $keyPath,
-            '--pubkey-cert-pem', $certPath,
-            '--output', $outputPath,
-            $xmlPath,
-        ]);
-        $process->run();
-
-        if ($process->isSuccessful() && file_exists($outputPath)) {
-            return file_get_contents($outputPath);
+        // Extract certificate
+        $certProc = new Process(['openssl', 'pkcs12', '-legacy', '-in', $p12Path, '-passin', 'pass:' . $password, '-nokeys', '-clcerts', '-out', $certPath]);
+        $certProc->run();
+        if (! $certProc->isSuccessful()) {
+            $certProc2 = new Process(['openssl', 'pkcs12', '-in', $p12Path, '-passin', 'pass:' . $password, '-nokeys', '-clcerts', '-out', $certPath]);
+            $certProc2->run();
         }
-
-        return null;
     }
 
-    private function signWithPhp(string $xml, string $privateKey, string $certificate): string
+    private function signXadesBes(string $xml, string $privateKeyPem, string $certPem): string
     {
-        // Load the XML
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->loadXML($xml);
 
-        // Get the certificate data (clean PEM)
-        $certClean = preg_replace('/-----[^-]+-----/', '', $certificate);
+        // Create XMLSecurityDSig
+        $objDSig = new XMLSecurityDSig();
+        $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
+
+        // Add enveloped-signature reference to the root element
+        $rootId = $doc->documentElement->getAttribute('id');
+        $refUri = $rootId ? '#' . $rootId : '';
+
+        $objDSig->addReference(
+            $doc,
+            XMLSecurityDSig::SHA1,
+            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+            ['force_uri' => true, 'uri' => $refUri]
+        );
+
+        // Create the key
+        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
+        $objKey->loadKey($privateKeyPem);
+
+        // Sign the XML
+        $objDSig->sign($objKey);
+
+        // Add certificate to KeyInfo
+        $certClean = preg_replace('/-----[^-]+-----/', '', $certPem);
         $certClean = preg_replace('/\s+/', '', $certClean);
 
-        // Canonicalize the XML for signing
-        $canonicalXml = $doc->C14N();
+        $objDSig->add509Cert($certClean, true, false, ['issuerSerial' => true, 'subjectName' => true]);
 
-        // Create SHA1 digest of the document
-        $digest = base64_encode(hash('sha1', $canonicalXml, true));
+        // Append signature to root element FIRST
+        $objDSig->appendSignature($doc->documentElement);
 
-        // Build SignedInfo
-        $signedInfo = '<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">'
-            . '<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>'
-            . '<ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>'
-            . '<ds:Reference URI="">'
-            . '<ds:Transforms>'
-            . '<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>'
-            . '</ds:Transforms>'
-            . '<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>'
-            . '<ds:DigestValue>' . $digest . '</ds:DigestValue>'
-            . '</ds:Reference>'
-            . '</ds:SignedInfo>';
-
-        // Sign the SignedInfo
-        $pkey = openssl_pkey_get_private($privateKey);
-        if (! $pkey) {
-            throw new \RuntimeException('No se pudo cargar la llave privada para firmar');
-        }
-
-        $signedInfoDoc = new \DOMDocument();
-        $signedInfoDoc->loadXML($signedInfo);
-        $canonicalSignedInfo = $signedInfoDoc->C14N();
-
-        openssl_sign($canonicalSignedInfo, $signature, $pkey, OPENSSL_ALGO_SHA1);
-        $signatureBase64 = base64_encode($signature);
-
-        // Build complete Signature element
-        $signatureXml = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Id="Signature">'
-            . $signedInfo
-            . '<ds:SignatureValue>' . $signatureBase64 . '</ds:SignatureValue>'
-            . '<ds:KeyInfo>'
-            . '<ds:X509Data>'
-            . '<ds:X509Certificate>' . $certClean . '</ds:X509Certificate>'
-            . '</ds:X509Data>'
-            . '</ds:KeyInfo>'
-            . '</ds:Signature>';
-
-        // Insert signature before closing tag of root element
-        $root = $doc->documentElement;
-        $sigFragment = $doc->createDocumentFragment();
-        $sigFragment->appendXML($signatureXml);
-        $root->appendChild($sigFragment);
+        // Then add XAdES-BES SignedProperties inside the signature (now in $doc)
+        $this->addXadesProperties($doc, $certPem, $certClean);
 
         return $doc->saveXML();
+    }
+
+    private function addXadesProperties(\DOMDocument $doc, string $certPem, string $certClean): void
+    {
+        // Find the Signature node already appended to $doc
+        $signatureNodes = $doc->getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+        if ($signatureNodes->length === 0) return;
+        $signatureNode = $signatureNodes->item(0);
+
+        $signatureId = 'Signature' . rand(100000, 999999);
+        $signatureNode->setAttribute('Id', $signatureId);
+
+        // Parse certificate for issuer and serial
+        $certData = openssl_x509_parse($certPem);
+        $issuerDN = '';
+        if (isset($certData['issuer'])) {
+            $parts = [];
+            foreach ($certData['issuer'] as $k => $v) {
+                $parts[] = "$k=$v";
+            }
+            $issuerDN = implode(',', $parts);
+        }
+        $serialNumber = $certData['serialNumber'] ?? '';
+        $certDigest = base64_encode(hash('sha1', base64_decode($certClean), true));
+
+        $signingTime = date('Y-m-d\TH:i:sP');
+
+        $etsiNs = 'http://uri.etsi.org/01903/v1.3.2#';
+
+        // Build QualifyingProperties
+        $qpXml = '<etsi:QualifyingProperties xmlns:etsi="' . $etsiNs . '" Target="#' . $signatureId . '">'
+            . '<etsi:SignedProperties Id="' . $signatureId . '-SignedProperties">'
+            . '<etsi:SignedSignatureProperties>'
+            . '<etsi:SigningTime>' . $signingTime . '</etsi:SigningTime>'
+            . '<etsi:SigningCertificate>'
+            . '<etsi:Cert>'
+            . '<etsi:CertDigest>'
+            . '<ds:DigestMethod xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"></ds:DigestMethod>'
+            . '<ds:DigestValue xmlns:ds="http://www.w3.org/2000/09/xmldsig#">' . $certDigest . '</ds:DigestValue>'
+            . '</etsi:CertDigest>'
+            . '<etsi:IssuerSerial>'
+            . '<ds:X509IssuerName xmlns:ds="http://www.w3.org/2000/09/xmldsig#">' . htmlspecialchars($issuerDN) . '</ds:X509IssuerName>'
+            . '<ds:X509SerialNumber xmlns:ds="http://www.w3.org/2000/09/xmldsig#">' . $serialNumber . '</ds:X509SerialNumber>'
+            . '</etsi:IssuerSerial>'
+            . '</etsi:Cert>'
+            . '</etsi:SigningCertificate>'
+            . '</etsi:SignedSignatureProperties>'
+            . '<etsi:SignedDataObjectProperties>'
+            . '<etsi:DataObjectFormat ObjectReference="#Reference-ID-' . rand(100000, 999999) . '">'
+            . '<etsi:Description>contenido comprobante</etsi:Description>'
+            . '<etsi:MimeType>text/xml</etsi:MimeType>'
+            . '</etsi:DataObjectFormat>'
+            . '</etsi:SignedDataObjectProperties>'
+            . '</etsi:SignedProperties>'
+            . '</etsi:QualifyingProperties>';
+
+        // Append as ds:Object inside ds:Signature
+        $objectNode = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Object');
+        $fragment = $doc->createDocumentFragment();
+        $fragment->appendXML($qpXml);
+        $objectNode->appendChild($fragment);
+        $signatureNode->appendChild($objectNode);
     }
 }

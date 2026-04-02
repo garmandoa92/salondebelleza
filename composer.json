@@ -12,6 +12,7 @@
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "robrichards/xmlseclibs": "^3.1",
         "spatie/laravel-permission": "^7.2",
         "stancl/tenancy": "^3.0",
         "symfony/process": "^7.4",
