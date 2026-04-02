@@ -230,81 +230,125 @@ const submit = async () => {
   } finally { saving.value = false }
 }
 
+const paymentMethods = [
+  { key: 'cash', label: 'Efectivo', icon: '💵' },
+  { key: 'transfer', label: 'Transferencia', icon: '🏦' },
+  { key: 'card_debit', label: 'Debito', icon: '💳' },
+  { key: 'card_credit', label: 'Credito', icon: '💳' },
+]
 const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit: 'T. Debito', card_credit: 'T. Credito', other: 'Otro' }
+
+const setPaymentMethod = (key) => {
+  if (payments.value.length === 1) payments.value[0].method = key
+}
+
+const showDiscount = ref(false)
+watch(() => discount.value.enabled, (v) => { if (v) showDiscount.value = true })
 
 const printReceipt = () => window.open(`${base}/print/sale/${completedSaleId.value}`, '_blank', 'width=400,height=600')
 
 const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?'
+
+const typeBadge = (t) => ({
+  service: 'bg-blue-100 text-blue-700',
+  product: 'bg-emerald-100 text-emerald-700',
+  package: 'bg-purple-100 text-purple-700',
+}[t] || 'bg-gray-100 text-gray-700')
+
+const typeLabel = (t) => ({ service: 'Servicio', product: 'Producto', package: 'Paquete' }[t] || t)
 </script>
 
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto py-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto mx-4">
-      <div class="p-5">
-        <!-- Completed state -->
-        <div v-if="completed" class="text-center py-12 space-y-4">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
-            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 overflow-y-auto py-4">
+    <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto mx-4">
+
+      <!-- ========== COMPLETED STATE ========== -->
+      <div v-if="completed" class="bg-white rounded-2xl">
+        <div class="text-center py-16 px-8 space-y-5">
+          <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 class="text-xl font-bold">Cobro completado</h2>
-          <p class="text-2xl font-bold text-green-600">${{ total.toFixed(2) }}</p>
-          <p v-if="change > 0" class="text-lg text-gray-600">Vuelto: ${{ change.toFixed(2) }}</p>
-          <div class="flex gap-2 justify-center">
-            <Button variant="outline" @click="printReceipt">
-              Imprimir recibo
-            </Button>
-            <Button @click="emit('close')">Cerrar</Button>
+          <h2 class="text-2xl font-bold text-gray-900">Cobro completado</h2>
+          <p class="text-4xl font-bold text-green-600">${{ total.toFixed(2) }}</p>
+          <p v-if="change > 0" class="text-lg text-gray-500">Vuelto: <span class="font-semibold text-green-600">${{ change.toFixed(2) }}</span></p>
+          <div class="flex gap-3 justify-center pt-4">
+            <Button variant="outline" size="lg" @click="printReceipt">Imprimir recibo</Button>
+            <Button size="lg" @click="emit('close')">Cerrar</Button>
           </div>
         </div>
+      </div>
 
-        <!-- Checkout form -->
-        <div v-else class="space-y-6">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-bold">Cobro</h2>
-            <button @click="emit('close')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
-          </div>
+      <!-- ========== CHECKOUT FORM ========== -->
+      <div v-else>
+        <!-- Header -->
+        <div class="bg-white rounded-t-2xl border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <h2 class="text-xl font-bold text-gray-900">Nueva venta</h2>
+          <button @click="emit('close')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
 
-          <!-- Client header (from appointment) -->
-          <div v-if="isFromAppointment && clientName" class="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
-            <Avatar class="h-9 w-9"><AvatarFallback class="text-xs">{{ initials(clientName) }}</AvatarFallback></Avatar>
-            <div>
-              <p class="font-medium text-sm">{{ clientName }}</p>
-              <p class="text-xs text-blue-600">Cobro desde cita</p>
+        <div class="p-6 space-y-6">
+
+          <!-- ===== CLIENT SECTION ===== -->
+          <div class="bg-white rounded-xl shadow-sm border p-5">
+            <!-- From appointment -->
+            <div v-if="isFromAppointment && clientName" class="flex items-center gap-4">
+              <Avatar class="h-11 w-11 ring-2 ring-blue-100"><AvatarFallback class="text-sm bg-blue-50 text-blue-700">{{ initials(clientName) }}</AvatarFallback></Avatar>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900">{{ clientName }}</p>
+                <p class="text-xs text-blue-600">Cobro desde cita</p>
+              </div>
+              <span v-if="clientBalance > 0" class="text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">${{ clientBalance.toFixed(2) }} a favor</span>
             </div>
-          </div>
 
-          <!-- Client selector (NOT from appointment) -->
-          <Card v-if="!isFromAppointment">
-            <CardHeader class="pb-2"><CardTitle class="text-sm">Cliente</CardTitle></CardHeader>
-            <CardContent class="space-y-3">
-              <div v-if="selectedClientName" class="flex items-center justify-between bg-blue-50 rounded-lg p-3">
-                <div class="flex items-center gap-2">
-                  <Avatar class="h-8 w-8"><AvatarFallback class="text-xs">{{ initials(selectedClientName) }}</AvatarFallback></Avatar>
-                  <span class="text-sm font-medium">{{ selectedClientName }}</span>
+            <!-- Client selector -->
+            <div v-else class="space-y-3">
+              <p class="text-sm font-semibold text-gray-700">Cliente</p>
+
+              <!-- Selected client mini-card -->
+              <div v-if="selectedClientName" class="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                <Avatar class="h-10 w-10 ring-2 ring-gray-200"><AvatarFallback class="text-sm">{{ initials(selectedClientName) }}</AvatarFallback></Avatar>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-sm text-gray-900 truncate">{{ selectedClientName }}</p>
+                  <span v-if="clientBalance > 0" class="text-xs text-green-600">${{ clientBalance.toFixed(2) }} a favor</span>
                 </div>
-                <Button variant="ghost" size="sm" class="text-xs" @click="selectedClientId = null; selectedClientName = null">Cambiar</Button>
+                <button @click="selectedClientId = null; selectedClientName = null" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
               </div>
 
               <template v-else>
-                <Input v-model="clientSearch" placeholder="Buscar cliente por nombre o telefono..." />
-                <div v-if="clientResults.length" class="border rounded-md max-h-40 overflow-y-auto">
+                <!-- Search input with icon -->
+                <div class="relative">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  <Input v-model="clientSearch" placeholder="Buscar cliente por nombre o telefono..." class="pl-9" />
+                </div>
+
+                <!-- Search results dropdown -->
+                <div v-if="clientResults.length" class="border rounded-lg shadow-sm overflow-hidden max-h-48 overflow-y-auto">
                   <button v-for="c in clientResults" :key="c.id" @click="selectClient(c)"
-                    class="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0 text-sm">
-                    <span class="font-medium">{{ c.first_name }} {{ c.last_name }}</span>
-                    <span class="text-gray-500 ml-2">{{ c.phone }}</span>
+                    class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 border-b last:border-0 transition">
+                    <Avatar class="h-8 w-8"><AvatarFallback class="text-xs">{{ initials(c.first_name + ' ' + c.last_name) }}</AvatarFallback></Avatar>
+                    <div class="text-left">
+                      <p class="text-sm font-medium text-gray-900">{{ c.first_name }} {{ c.last_name }}</p>
+                      <p class="text-xs text-gray-500">{{ c.phone }}</p>
+                    </div>
                   </button>
                 </div>
 
+                <!-- Pills -->
                 <div class="flex gap-2">
-                  <Button variant="outline" size="sm" class="text-xs" @click="skipClient">Sin cliente</Button>
-                  <Button variant="outline" size="sm" class="text-xs" @click="showNewClient = !showNewClient">
+                  <button @click="skipClient" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Sin cliente</button>
+                  <button @click="showNewClient = !showNewClient" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
                     {{ showNewClient ? 'Cancelar' : '+ Nuevo cliente' }}
-                  </Button>
+                  </button>
                 </div>
 
-                <div v-if="showNewClient" class="border rounded-lg p-3 space-y-2">
+                <!-- New client form -->
+                <div v-if="showNewClient" class="border rounded-lg p-4 space-y-2 bg-gray-50">
                   <div class="grid grid-cols-2 gap-2">
                     <Input v-model="newClient.first_name" placeholder="Nombre" />
                     <Input v-model="newClient.last_name" placeholder="Apellido" />
@@ -313,170 +357,263 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
                   <Button size="sm" @click="createQuickClient" :disabled="!newClient.first_name || !newClient.phone">Crear y seleccionar</Button>
                 </div>
               </template>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
+          <!-- ===== TWO COLUMNS ===== -->
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Left: Items -->
-            <div class="lg:col-span-2 space-y-4">
-              <Card>
-                <CardHeader class="pb-2">
-                  <div class="flex items-center justify-between">
-                    <CardTitle class="text-sm">Items</CardTitle>
-                    <div class="flex gap-1 flex-wrap">
-                      <select class="text-xs border rounded px-2 py-1" @change="e => { const s = services.find(x => x.id === e.target.value); if(s) addItem('service', s); e.target.value='' }">
-                        <option value="">+ Servicio</option>
-                        <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }} - ${{ Number(s.base_price).toFixed(2) }}</option>
-                      </select>
-                      <select class="text-xs border rounded px-2 py-1" @change="e => { const p = products.find(x => x.id === e.target.value); if(p) addItem('product', p); e.target.value='' }">
-                        <option value="">+ Producto</option>
-                        <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - ${{ Number(p.sale_price).toFixed(2) }} ({{ p.stock }})</option>
-                      </select>
-                      <select v-if="packages.length" class="text-xs border rounded px-2 py-1" @change="e => { const pk = packages.find(x => x.id === e.target.value); if(pk) addPackage(pk); e.target.value='' }">
-                        <option value="">+ Paquete</option>
-                        <option v-for="pk in packages" :key="pk.id" :value="pk.id">{{ pk.name }} - ${{ Number(pk.price).toFixed(2) }}</option>
-                      </select>
-                    </div>
+            <!-- LEFT COLUMN -->
+            <div class="lg:col-span-2 space-y-5">
+
+              <!-- Items -->
+              <div class="bg-white rounded-xl shadow-sm border">
+                <div class="px-5 pt-5 pb-3 border-b flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-900">Servicios y productos</h3>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <select class="text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-blue-100 transition"
+                      @change="e => { const s = services.find(x => x.id === e.target.value); if(s) addItem('service', s); e.target.value='' }">
+                      <option value="">+ Servicio</option>
+                      <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }} - ${{ Number(s.base_price).toFixed(2) }}</option>
+                    </select>
+                    <select class="text-xs font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-emerald-100 transition"
+                      @change="e => { const p = products.find(x => x.id === e.target.value); if(p) addItem('product', p); e.target.value='' }">
+                      <option value="">+ Producto</option>
+                      <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - ${{ Number(p.sale_price).toFixed(2) }}</option>
+                    </select>
+                    <select v-if="packages.length" class="text-xs font-medium border border-purple-200 bg-purple-50 text-purple-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-purple-100 transition"
+                      @change="e => { const pk = packages.find(x => x.id === e.target.value); if(pk) addPackage(pk); e.target.value='' }">
+                      <option value="">+ Paquete</option>
+                      <option v-for="pk in packages" :key="pk.id" :value="pk.id">{{ pk.name }} - ${{ Number(pk.price).toFixed(2) }}</option>
+                    </select>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div class="p-5">
                   <table v-if="items.length" class="w-full text-sm">
-                    <thead><tr class="border-b text-gray-500"><th class="text-left pb-2">Desc.</th><th class="w-16 pb-2">Cant</th><th class="w-20 pb-2">Precio</th><th class="w-20 pb-2 text-right">Subtotal</th><th class="w-8"></th></tr></thead>
+                    <thead>
+                      <tr class="text-xs text-gray-400 uppercase tracking-wider">
+                        <th class="text-left pb-3 font-medium">Item</th>
+                        <th class="w-16 pb-3 font-medium text-center">Cant</th>
+                        <th class="w-24 pb-3 font-medium text-center">Precio</th>
+                        <th class="w-24 pb-3 font-medium text-right">Subtotal</th>
+                        <th class="w-8 pb-3"></th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      <tr v-for="(item, i) in items" :key="i" class="border-b last:border-0">
-                        <td class="py-2">
-                          <span class="font-medium">{{ item.name }}</span>
-                          <select v-if="item.type === 'service'" v-model="item.stylist_id" class="block text-xs border rounded px-1 py-0.5 mt-1">
-                            <option v-for="s in stylists" :key="s.id" :value="s.id">{{ s.name }}</option>
-                          </select>
+                      <tr v-for="(item, i) in items" :key="i" class="border-t border-gray-100">
+                        <td class="py-3">
+                          <div class="flex items-start gap-2">
+                            <span :class="[typeBadge(item.type), 'text-[10px] font-semibold px-1.5 py-0.5 rounded-md mt-0.5 whitespace-nowrap']">{{ typeLabel(item.type) }}</span>
+                            <div class="min-w-0">
+                              <p class="font-medium text-gray-900 truncate">{{ item.name }}</p>
+                              <select v-if="item.type === 'service'" v-model="item.stylist_id" class="mt-1 text-xs border rounded-md px-1.5 py-1 text-gray-500 bg-gray-50">
+                                <option v-for="s in stylists" :key="s.id" :value="s.id">{{ s.name }}</option>
+                              </select>
+                            </div>
+                          </div>
                         </td>
-                        <td><Input v-model="item.quantity" type="number" min="0.01" step="1" class="h-7 text-xs" @input="updateItemSubtotal(item)" /></td>
-                        <td><Input v-model="item.unit_price" type="number" step="0.01" class="h-7 text-xs" @input="updateItemSubtotal(item)" /></td>
-                        <td class="text-right font-medium">${{ Number(item.subtotal).toFixed(2) }}</td>
-                        <td><button @click="removeItem(i)" class="text-red-400 hover:text-red-600 text-xs">X</button></td>
+                        <td class="py-3"><Input v-model="item.quantity" type="number" min="0.01" step="1" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
+                        <td class="py-3"><Input v-model="item.unit_price" type="number" step="0.01" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
+                        <td class="py-3 text-right font-semibold text-gray-900">${{ Number(item.subtotal).toFixed(2) }}</td>
+                        <td class="py-3">
+                          <button @click="removeItem(i)" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                          </button>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
-                  <p v-else class="text-sm text-gray-400 text-center py-4">Agrega servicios o productos</p>
-                </CardContent>
-              </Card>
+                  <div v-else class="text-center py-10">
+                    <svg class="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+                    <p class="text-sm text-gray-400">Agrega servicios o productos para comenzar</p>
+                  </div>
+                </div>
+              </div>
 
-              <!-- Discount -->
-              <Card>
-                <CardContent class="pt-4">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="discount.enabled" class="rounded" />
-                    <span class="text-sm font-medium">Aplicar descuento</span>
+              <!-- Discount (collapsible) -->
+              <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <button @click="showDiscount = !showDiscount" class="w-full px-5 py-3.5 flex items-center justify-between hover:bg-gray-50 transition">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-gray-700">Descuento</span>
+                    <span v-if="discount.enabled && discountAmount > 0" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">-${{ discountAmount.toFixed(2) }}</span>
+                  </div>
+                  <svg :class="['w-4 h-4 text-gray-400 transition-transform', showDiscount && 'rotate-180']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div v-if="showDiscount" class="px-5 pb-4 space-y-3 border-t">
+                  <label class="flex items-center gap-2 cursor-pointer pt-3">
+                    <input type="checkbox" v-model="discount.enabled" class="rounded border-gray-300" />
+                    <span class="text-sm">Aplicar descuento</span>
                   </label>
-                  <div v-if="discount.enabled" class="grid grid-cols-3 gap-2 mt-3">
-                    <select v-model="discount.type" class="text-sm border rounded px-2 py-1">
+                  <div v-if="discount.enabled" class="grid grid-cols-3 gap-2">
+                    <select v-model="discount.type" class="text-sm border rounded-lg px-3 py-2 bg-gray-50">
                       <option value="percentage">Porcentaje %</option>
                       <option value="fixed">Monto fijo $</option>
                     </select>
-                    <Input v-model="discount.amount" type="number" min="0" step="0.01" class="h-8 text-sm" />
-                    <Input v-model="discount.reason" placeholder="Motivo" class="h-8 text-sm" />
+                    <Input v-model="discount.amount" type="number" min="0" step="0.01" placeholder="0" />
+                    <Input v-model="discount.reason" placeholder="Motivo" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               <!-- Client balance / Advance -->
-              <Card v-if="clientBalance > 0">
-                <CardContent class="pt-4">
-                  <div class="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
-                    <p class="text-sm font-medium text-green-800">
-                      El cliente tiene ${{ clientBalance.toFixed(2) }} a favor
-                    </p>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" v-model="applyAdvance" class="rounded" />
-                      <span class="text-sm">Aplicar saldo al cobro</span>
-                    </label>
-                    <p v-if="applyAdvance" class="text-xs text-green-700">
-                      Total a cobrar: ${{ total.toFixed(2) }} → ${{ totalAfterAdvance.toFixed(2) }}
-                    </p>
+              <div v-if="clientBalance > 0" class="bg-green-50 border border-green-200 rounded-xl p-5 space-y-3">
+                <div class="flex items-center gap-2">
+                  <span class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-lg">$</span>
+                  <div>
+                    <p class="text-sm font-semibold text-green-800">Saldo a favor: ${{ clientBalance.toFixed(2) }}</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" v-model="applyAdvance" class="rounded border-green-300" />
+                  <span class="text-sm text-green-800">Aplicar saldo al cobro</span>
+                </label>
+                <p v-if="applyAdvance" class="text-sm text-green-700 font-medium">
+                  ${{ total.toFixed(2) }} → <span class="text-lg">${{ totalAfterAdvance.toFixed(2) }}</span>
+                </p>
+              </div>
 
-              <!-- Payment methods -->
-              <Card>
-                <CardHeader class="pb-2">
-                  <div class="flex items-center justify-between">
-                    <CardTitle class="text-sm">Metodo de pago</CardTitle>
-                    <Button variant="ghost" size="sm" class="text-xs" @click="addPaymentMethod">+ Agregar</Button>
-                  </div>
-                </CardHeader>
-                <CardContent class="space-y-2">
-                  <div v-for="(p, i) in payments" :key="i" class="flex items-center gap-2">
-                    <select v-model="p.method" class="flex-1 text-sm border rounded px-2 py-1.5">
-                      <option v-for="(label, key) in paymentLabels" :key="key" :value="key">{{ label }}</option>
-                    </select>
-                    <Input v-model="p.amount" type="number" step="0.01" class="w-28 h-8 text-sm" placeholder="Monto" />
-                    <Input v-if="p.method === 'cash'" v-model="p.received" type="number" step="0.01" class="w-28 h-8 text-sm" placeholder="Recibido" />
-                    <button v-if="payments.length > 1" @click="removePayment(i)" class="text-red-400 text-xs">X</button>
-                  </div>
-                  <div class="text-sm mt-2">
-                    <span v-if="paymentDiff > 0.01" class="text-red-500 font-medium">Falta: ${{ paymentDiff.toFixed(2) }}</span>
-                    <span v-else-if="paymentDiff < -0.01" class="text-amber-500 font-medium">Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}</span>
-                    <span v-else class="text-green-600 font-medium">Correcto</span>
-                  </div>
-                  <p v-if="change > 0" class="text-sm font-medium text-blue-600">Vuelto: ${{ change.toFixed(2) }}</p>
-                </CardContent>
-              </Card>
+              <!-- Payment method -->
+              <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-900">Metodo de pago</h3>
+                  <button v-if="payments.length < 4" @click="addPaymentMethod" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">+ Agregar metodo</button>
+                </div>
 
-              <!-- Invoice -->
-              <Card>
-                <CardContent class="pt-4 space-y-3">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="invoiceRequired" class="rounded" />
-                    <span class="text-sm font-medium">Requiere comprobante electronico</span>
-                  </label>
-                  <div v-if="invoiceRequired" class="space-y-2">
-                    <select v-model="invoiceData.buyer_identification_type" class="w-full text-sm border rounded px-2 py-1.5">
-                      <option value="final_consumer">Consumidor final</option>
-                      <option value="cedula">Cedula</option>
-                      <option value="RUC">RUC</option>
-                      <option value="passport">Pasaporte</option>
-                    </select>
-                    <Input v-if="invoiceData.buyer_identification_type !== 'final_consumer'" v-model="invoiceData.buyer_identification" placeholder="Identificacion" class="h-8 text-sm" />
-                    <Input v-if="invoiceData.buyer_identification_type !== 'final_consumer'" v-model="invoiceData.buyer_name" placeholder="Nombre / Razon social" class="h-8 text-sm" />
-                    <Input v-model="invoiceData.buyer_email" type="email" placeholder="Email para enviar RIDE" class="h-8 text-sm" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <!-- Payment chips -->
+                <div v-if="payments.length === 1" class="flex gap-2 flex-wrap">
+                  <button v-for="m in paymentMethods" :key="m.key" @click="setPaymentMethod(m.key)"
+                    :class="['px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all',
+                      payments[0].method === m.key
+                        ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50']">
+                    <span class="mr-1.5">{{ m.icon }}</span>{{ m.label }}
+                  </button>
+                </div>
 
-            <!-- Right: Summary -->
-            <div>
-              <Card class="sticky top-4">
-                <CardHeader><CardTitle class="text-sm">Resumen</CardTitle></CardHeader>
-                <CardContent class="space-y-2 text-sm">
-                  <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span>${{ subtotal.toFixed(2) }}</span></div>
-                  <div v-if="discountAmount > 0" class="flex justify-between text-red-500"><span>Descuento</span><span>-${{ discountAmount.toFixed(2) }}</span></div>
-                  <template v-if="hasMixedIva">
-                    <div class="flex justify-between"><span class="text-gray-500">Base IVA {{ globalIva }}%</span><span>${{ subtotalIva.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">Base IVA 0%</span><span>${{ subtotal0.toFixed(2) }}</span></div>
-                  </template>
-                  <div class="flex justify-between"><span class="text-gray-500">IVA {{ globalIva }}%</span><span>${{ ivaAmount.toFixed(2) }}</span></div>
-                  <div v-if="advanceApplied > 0" class="flex justify-between text-green-600"><span>Anticipo aplicado</span><span>-${{ advanceApplied.toFixed(2) }}</span></div>
-                  <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Total</span><span>${{ totalAfterAdvance.toFixed(2) }}</span></div>
-                  <div v-if="Number(tip.amount) > 0" class="flex justify-between text-gray-500"><span>Propina</span><span>+${{ Number(tip.amount).toFixed(2) }}</span></div>
-
-                  <div class="border-t pt-3 mt-3 space-y-2">
-                    <Label class="text-xs">Propina</Label>
-                    <div class="flex gap-2">
-                      <Input v-model="tip.amount" type="number" min="0" step="0.5" class="h-7 text-xs flex-1" placeholder="$0" />
-                      <select v-model="tip.stylist_id" class="text-xs border rounded px-1">
-                        <option value="">Para...</option>
-                        <option v-for="s in stylists" :key="s.id" :value="s.id">{{ s.name }}</option>
+                <!-- Payment rows -->
+                <div class="space-y-3">
+                  <div v-for="(p, i) in payments" :key="i" class="space-y-2">
+                    <div class="flex items-center gap-2">
+                      <select v-if="payments.length > 1" v-model="p.method" class="flex-1 text-sm border rounded-lg px-3 py-2 bg-gray-50">
+                        <option v-for="(label, key) in paymentLabels" :key="key" :value="key">{{ label }}</option>
                       </select>
+                      <div class="relative" :class="payments.length > 1 ? 'w-32' : 'flex-1'">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <Input v-model="p.amount" type="number" step="0.01" class="pl-7" placeholder="0.00" />
+                      </div>
+                      <button v-if="payments.length > 1" @click="removePayment(i)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                    <!-- Cash: received + change -->
+                    <div v-if="p.method === 'cash'" class="flex items-center gap-3 pl-1">
+                      <div class="relative flex-1">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Recibido $</span>
+                        <Input v-model="p.received" type="number" step="0.01" class="pl-20 text-sm" placeholder="0.00" />
+                      </div>
+                      <p v-if="change > 0" class="text-sm font-semibold text-green-600 whitespace-nowrap">Vuelto: ${{ change.toFixed(2) }}</p>
                     </div>
                   </div>
+                </div>
 
-                  <Button class="w-full mt-4" :disabled="saving || !items.length || paymentDiff > 0.01" @click="submit">
-                    {{ saving ? 'Procesando...' : 'Completar cobro' }}
-                  </Button>
-                </CardContent>
-              </Card>
+                <!-- Payment status -->
+                <div class="flex items-center gap-2 pt-1">
+                  <span v-if="paymentDiff > 0.01" class="flex items-center gap-1.5 text-sm font-medium text-red-500">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>Falta: ${{ paymentDiff.toFixed(2) }}
+                  </span>
+                  <span v-else-if="paymentDiff < -0.01" class="flex items-center gap-1.5 text-sm font-medium text-amber-500">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}
+                  </span>
+                  <span v-else class="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Correcto
+                  </span>
+                </div>
+              </div>
+
+              <!-- Invoice toggle -->
+              <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <div :class="['relative w-11 h-6 rounded-full transition-colors', invoiceRequired ? 'bg-primary' : 'bg-gray-200']" @click="invoiceRequired = !invoiceRequired">
+                    <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', invoiceRequired ? 'translate-x-[22px]' : 'translate-x-0.5']"></div>
+                  </div>
+                  <span class="text-sm font-semibold text-gray-700">Comprobante electronico</span>
+                </label>
+                <div v-if="invoiceRequired" class="space-y-3 pt-1">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-xs text-gray-500 mb-1 block">Tipo identificacion</label>
+                      <select v-model="invoiceData.buyer_identification_type" class="w-full text-sm border rounded-lg px-3 py-2 bg-gray-50">
+                        <option value="final_consumer">Consumidor final</option>
+                        <option value="cedula">Cedula</option>
+                        <option value="RUC">RUC</option>
+                        <option value="passport">Pasaporte</option>
+                      </select>
+                    </div>
+                    <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
+                      <label class="text-xs text-gray-500 mb-1 block">Numero</label>
+                      <Input v-model="invoiceData.buyer_identification" placeholder="0912345678" />
+                    </div>
+                  </div>
+                  <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
+                    <label class="text-xs text-gray-500 mb-1 block">Nombre / Razon social</label>
+                    <Input v-model="invoiceData.buyer_name" placeholder="Nombre completo" />
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500 mb-1 block">Email (para enviar RIDE)</label>
+                    <Input v-model="invoiceData.buyer_email" type="email" placeholder="correo@ejemplo.com" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Summary -->
+            <div>
+              <div class="bg-white rounded-xl shadow-sm border p-5 sticky top-20 space-y-4">
+                <h3 class="text-sm font-semibold text-gray-900">Resumen</h3>
+
+                <div class="space-y-2.5 text-sm">
+                  <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span class="font-medium">${{ subtotal.toFixed(2) }}</span></div>
+                  <div v-if="discountAmount > 0" class="flex justify-between text-red-500"><span>Descuento</span><span class="font-medium">-${{ discountAmount.toFixed(2) }}</span></div>
+                  <template v-if="hasMixedIva">
+                    <div class="flex justify-between"><span class="text-gray-400">Base IVA {{ globalIva }}%</span><span>${{ subtotalIva.toFixed(2) }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">Base IVA 0%</span><span>${{ subtotal0.toFixed(2) }}</span></div>
+                  </template>
+                  <div class="flex justify-between"><span class="text-gray-500">IVA {{ globalIva }}%</span><span class="font-medium">${{ ivaAmount.toFixed(2) }}</span></div>
+                  <div v-if="advanceApplied > 0" class="flex justify-between text-green-600"><span>Anticipo</span><span class="font-medium">-${{ advanceApplied.toFixed(2) }}</span></div>
+                </div>
+
+                <div class="border-t pt-3">
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-gray-700 font-semibold">Total</span>
+                    <span class="text-2xl font-bold text-gray-900">${{ totalAfterAdvance.toFixed(2) }}</span>
+                  </div>
+                  <div v-if="Number(tip.amount) > 0" class="flex justify-between text-sm text-gray-400 mt-1"><span>+ Propina</span><span>${{ Number(tip.amount).toFixed(2) }}</span></div>
+                </div>
+
+                <!-- Tip -->
+                <div class="border-t pt-3 space-y-2">
+                  <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Propina</p>
+                  <div class="flex gap-2">
+                    <div class="relative flex-1">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                      <Input v-model="tip.amount" type="number" min="0" step="0.5" class="pl-7 h-9 text-sm" placeholder="0" />
+                    </div>
+                    <select v-model="tip.stylist_id" class="text-xs border rounded-lg px-2 bg-gray-50">
+                      <option value="">Para...</option>
+                      <option v-for="s in stylists" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Submit button -->
+                <button @click="submit"
+                  :disabled="saving || !items.length || paymentDiff > 0.01"
+                  :class="['w-full py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm',
+                    saving || !items.length || paymentDiff > 0.01
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98] shadow-md']">
+                  {{ saving ? 'Procesando...' : `Completar cobro · $${totalWithTip.toFixed(2)}` }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
