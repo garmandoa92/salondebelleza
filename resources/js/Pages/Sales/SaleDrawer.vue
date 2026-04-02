@@ -40,7 +40,22 @@ const whatsappUrl = (phone) => `https://wa.me/593${phone?.replace(/^0/, '').repl
 
 const printReceipt = () => window.open(`${base}/print/sale/${sale.value.id}`, '_blank', 'width=400,height=600')
 const printRide = () => window.open(`${base}/print/invoice/${sale.value.sri_invoice?.id}`, '_blank', 'width=400,height=600')
-const openWhatsapp = () => window.open(whatsappUrl(sale.value.client?.phone), '_blank')
+const openWhatsapp = () => {
+  const s = sale.value
+  const name = s.client ? `${s.client.first_name}` : ''
+  const inv = s.sri_invoice
+  let msg = `Hola ${name}, gracias por tu visita!\n\nTotal: $${Number(s.total).toFixed(2)}`
+  if (inv) {
+    const num = `${inv.establishment}-${inv.emission_point}-${inv.sequential}`
+    msg += `\nFactura: ${num}`
+    if (inv.sri_authorization_number) {
+      msg += `\nAutorizacion SRI: ${inv.sri_authorization_number}`
+    }
+  }
+  msg += `\n\nTe esperamos pronto!`
+  const phone = `593${s.client?.phone?.replace(/^0/, '').replace(/\D/g, '')}`
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+}
 </script>
 
 <template>
