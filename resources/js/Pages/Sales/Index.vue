@@ -46,11 +46,11 @@ const printClosing = () => window.open(`/salon/${tenantId}/print/closing/${new D
 
     <!-- Day summary -->
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-      <Card class="border-l-[3px] border-l-[var(--color-primary)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.total || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Total hoy</p></CardContent></Card>
-      <Card class="border-l-[3px] border-l-[var(--color-accent)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">{{ summary?.count || 0 }}</p><p class="text-xs text-gray-500">Ventas hoy</p></CardContent></Card>
-      <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.cash || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Efectivo</p></CardContent></Card>
-      <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.card || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Tarjeta</p></CardContent></Card>
-      <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.transfer || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Transferencia</p></CardContent></Card>
+      <div class="kpi-card-primary rounded-xl p-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.total || 0).toFixed(2) }}</p><p class="text-xs opacity-80">Total hoy</p></div>
+      <div class="kpi-card-accent rounded-xl p-4 text-center"><p class="text-2xl font-bold">{{ summary?.count || 0 }}</p><p class="text-xs opacity-80">Ventas hoy</p></div>
+      <div class="kpi-card-light rounded-xl p-4 text-center"><p class="text-2xl font-bold kpi-value-primary">${{ Number(summary?.cash || 0).toFixed(2) }}</p><p class="text-xs kpi-label">Efectivo</p></div>
+      <div class="kpi-card-light rounded-xl p-4 text-center"><p class="text-2xl font-bold kpi-value-primary">${{ Number(summary?.card || 0).toFixed(2) }}</p><p class="text-xs kpi-label">Tarjeta</p></div>
+      <div class="kpi-card-light rounded-xl p-4 text-center"><p class="text-2xl font-bold kpi-value-primary">${{ Number(summary?.transfer || 0).toFixed(2) }}</p><p class="text-xs kpi-label">Transferencia</p></div>
     </div>
 
     <!-- Sales table -->

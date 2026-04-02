@@ -56,48 +56,35 @@ const statusColors = {
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card class="border-l-[3px] border-l-[var(--color-primary)]">
-        <CardContent class="pt-4">
-          <p class="text-xs text-gray-500 font-medium">Ingresos hoy</p>
-          <p class="text-2xl font-bold mt-1">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
-          <p :class="['text-xs mt-1', Number(pctChange(kpis?.revenue_today, kpis?.revenue_yesterday)) >= 0 ? 'text-green-600' : 'text-red-600']">
-            {{ pctChange(kpis?.revenue_today, kpis?.revenue_yesterday) }}% vs ayer
-          </p>
-        </CardContent>
-      </Card>
+      <div class="kpi-card-primary rounded-xl p-4">
+        <p class="text-xs font-medium opacity-80">Ingresos hoy</p>
+        <p class="text-2xl font-bold mt-1">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
+        <p class="text-xs mt-1 opacity-75">{{ pctChange(kpis?.revenue_today, kpis?.revenue_yesterday) }}% vs ayer</p>
+      </div>
 
-      <Card class="border-l-[3px] border-l-[var(--color-accent)]">
-        <CardContent class="pt-4">
-          <p class="text-xs text-gray-500 font-medium">Citas hoy</p>
-          <p class="text-2xl font-bold mt-1">{{ kpis?.appointments_total || 0 }}</p>
-          <div class="flex gap-2 text-xs mt-1">
-            <span class="text-green-600">{{ kpis?.appointments_completed || 0 }} ok</span>
-            <span class="text-blue-600">{{ kpis?.appointments_pending || 0 }} pend</span>
-            <span class="text-red-600">{{ kpis?.appointments_cancelled || 0 }} canc</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div class="kpi-card-accent rounded-xl p-4">
+        <p class="text-xs font-medium opacity-80">Citas hoy</p>
+        <p class="text-2xl font-bold mt-1">{{ kpis?.appointments_total || 0 }}</p>
+        <div class="flex gap-2 text-xs mt-1 opacity-80">
+          <span>{{ kpis?.appointments_completed || 0 }} ok</span>
+          <span>{{ kpis?.appointments_pending || 0 }} pend</span>
+          <span>{{ kpis?.appointments_cancelled || 0 }} canc</span>
+        </div>
+      </div>
 
-      <Card class="border-l-[3px] border-l-[var(--color-primary)]">
-        <CardContent class="pt-4">
-          <p class="text-xs text-gray-500 font-medium">Clientes atendidos</p>
-          <p class="text-2xl font-bold mt-1">{{ kpis?.clients_today || 0 }}</p>
-          <p class="text-xs text-gray-400 mt-1">unicos hoy</p>
-        </CardContent>
-      </Card>
+      <div class="kpi-card-light rounded-xl p-4">
+        <p class="text-xs font-medium kpi-label">Clientes atendidos</p>
+        <p class="text-2xl font-bold mt-1 kpi-value-primary">{{ kpis?.clients_today || 0 }}</p>
+        <p class="text-xs mt-1 kpi-label">unicos hoy</p>
+      </div>
 
-      <Card class="border-l-[3px] border-l-[var(--color-accent)]">
-        <CardContent class="pt-4">
-          <p class="text-xs text-gray-500 font-medium">Ocupacion</p>
-          <p class="text-2xl font-bold mt-1">{{ kpis?.occupancy || 0 }}%</p>
-          <div class="w-full h-2 bg-gray-100 rounded-full mt-2">
-            <div
-              class="h-2 rounded-full transition-all"
-              :style="{ width: `${kpis?.occupancy || 0}%`, backgroundColor: (kpis?.occupancy || 0) > 80 ? '#ef4444' : (kpis?.occupancy || 0) > 50 ? '#f59e0b' : '#22c55e' }"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div class="kpi-card-light-accent rounded-xl p-4">
+        <p class="text-xs font-medium kpi-label">Ocupacion</p>
+        <p class="text-2xl font-bold mt-1 kpi-value-accent">{{ kpis?.occupancy || 0 }}%</p>
+        <div class="w-full h-2 rounded-full mt-2 kpi-bar-bg">
+          <div class="h-2 rounded-full transition-all kpi-bar" :style="{ width: `${kpis?.occupancy || 0}%` }" />
+        </div>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

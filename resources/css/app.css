@@ -15,6 +15,7 @@
     /* Derived from --color-primary via JS */
     --color-primary-10: rgba(74, 124, 111, 0.10);
     --color-primary-5: rgba(74, 124, 111, 0.05);
+    --color-primary-15: rgba(74, 124, 111, 0.15);
 
     /* shadcn-vue — overridden dynamically by JS */
     --background: 0 0% 100%;
@@ -82,28 +83,45 @@
 }
 
 @layer components {
-  /* Sidebar nav items — use CSS vars for dynamic theme */
+  /* Sidebar nav items */
   .sidebar-active {
     background-color: var(--color-primary-10);
     color: var(--color-primary);
     border-left-color: var(--color-primary);
     font-weight: 500;
   }
-  .sidebar-active svg {
-    color: var(--color-primary);
-  }
+  .sidebar-active svg { color: var(--color-primary); }
   .sidebar-inactive {
-    color: #666666;
+    color: #555555;
     border-left-color: transparent;
   }
-  .sidebar-inactive svg {
-    color: #999999;
-  }
+  .sidebar-inactive svg { color: #999999; }
   .sidebar-inactive:hover {
-    background-color: var(--color-primary-5);
+    background-color: #F4F7F5;
     color: #333333;
   }
-  .sidebar-inactive:hover svg {
-    color: #666666;
+  .sidebar-inactive:hover svg { color: #666666; }
+
+  /* KPI cards */
+  .kpi-card-primary {
+    background-color: var(--color-primary);
+    color: #ffffff;
   }
+  .kpi-card-accent {
+    background-color: var(--color-accent);
+    color: #ffffff;
+  }
+  .kpi-card-light {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, white);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, white);
+  }
+  .kpi-card-light-accent {
+    background-color: color-mix(in srgb, var(--color-accent) 12%, white);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, white);
+  }
+  .kpi-value-primary { color: var(--color-primary); }
+  .kpi-value-accent { color: var(--color-accent); }
+  .kpi-label { color: #666666; }
+  .kpi-bar-bg { background-color: color-mix(in srgb, var(--color-accent) 25%, white); }
+  .kpi-bar { background-color: var(--color-accent); }
 }
