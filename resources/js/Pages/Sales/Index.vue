@@ -29,6 +29,8 @@ const openSale = (id) => {
 
 const formatDate = (d) => new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const statusLabels = { draft: 'Borrador', completed: 'Completada', refunded: 'Reembolsada' }
+
+const printClosing = () => window.open(`/salon/${tenantId}/print/closing/${new Date().toISOString().slice(0,10)}`, '_blank', 'width=400,height=600')
 const statusColors = { draft: 'bg-gray-100 text-gray-700', completed: 'bg-green-100 text-green-700', refunded: 'bg-red-100 text-red-700' }
 </script>
 
@@ -38,7 +40,12 @@ const statusColors = { draft: 'bg-gray-100 text-gray-700', completed: 'bg-green-
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-gray-900">Ventas</h1>
-      <Button @click="showCheckout = true">+ Nuevo cobro</Button>
+      <div class="flex gap-2">
+        <Button variant="outline" @click="printClosing">
+          Cierre de caja
+        </Button>
+        <Button @click="showCheckout = true">+ Nuevo cobro</Button>
+      </div>
     </div>
 
     <!-- Day summary -->

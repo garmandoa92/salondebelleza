@@ -186,6 +186,22 @@ class SettingsController extends Controller
         return back()->with('success', 'Configuracion de WhatsApp actualizada.');
     }
 
+    public function updatePrinter(Request $request)
+    {
+        $data = $request->validate([
+            'printer_message' => ['nullable', 'string', 'max:120'],
+            'printer_show_logo' => ['boolean'],
+            'printer_paper_size' => ['required', 'in:58mm,80mm'],
+        ]);
+
+        $tenant = tenant();
+        $settings = $tenant->settings ?? [];
+        $settings = array_merge($settings, $data);
+        $tenant->update(['settings' => $settings]);
+
+        return back()->with('success', 'Configuracion de impresora actualizada.');
+    }
+
     public function updatePayments(Request $request)
     {
         $data = $request->validate([

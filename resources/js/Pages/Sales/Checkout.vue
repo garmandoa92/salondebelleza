@@ -35,6 +35,10 @@ const saving = ref(false)
 const completed = ref(false)
 const completedSaleId = ref(null)
 
+// Client balance / advances
+const clientBalance = ref(0)
+const applyAdvance = ref(false)
+
 // Client selection (only when NOT from appointment)
 const selectedClientId = ref(null)
 const selectedClientName = ref(null)
@@ -46,6 +50,17 @@ let searchTimer = null
 
 const isFromAppointment = computed(() => !!props.appointmentId)
 const effectiveClientId = computed(() => isFromAppointment.value ? props.clientId : selectedClientId.value)
+
+// Fetch client balance when client changes
+watch(effectiveClientId, async (id) => {
+  clientBalance.value = 0
+  applyAdvance.value = false
+  if (!id) return
+  try {
+    const { data } = await axios.get(`${base}/advances/client/${id}`)
+    clientBalance.value = Number(data.balance) || 0
+  } catch {}
+})
 
 watch(clientSearch, (val) => {
   clearTimeout(searchTimer)
@@ -80,6 +95,8 @@ watch(() => props.open, (val) => {
   if (val) {
     completed.value = false
     completedSaleId.value = null
+    clientBalance.value = 0
+    applyAdvance.value = false
     items.value = props.preItems.length ? props.preItems.map(i => ({ ...i })) : []
     discount.value = { enabled: false, type: 'percentage', amount: 0, reason: '' }
     tip.value = { amount: 0, stylist_id: '' }
@@ -125,7 +142,9 @@ const ivaAmount = computed(() => {
   }, 0)
 })
 const total = computed(() => Math.round((baseImponible.value + ivaAmount.value) * 100) / 100)
-const totalWithTip = computed(() => total.value + Number(tip.value.amount || 0))
+const advanceApplied = computed(() => applyAdvance.value ? Math.min(clientBalance.value, total.value) : 0)
+const totalAfterAdvance = computed(() => Math.max(0, Math.round((total.value - advanceApplied.value) * 100) / 100))
+const totalWithTip = computed(() => totalAfterAdvance.value + Number(tip.value.amount || 0))
 
 const paymentTotal = computed(() => payments.value.reduce((sum, p) => sum + Number(p.amount || 0), 0))
 const paymentDiff = computed(() => Math.round((totalWithTip.value - paymentTotal.value) * 100) / 100)
@@ -135,8 +154,8 @@ const change = computed(() => {
   return Math.max(0, Number(cashPayment.received || 0) - Number(cashPayment.amount || 0))
 })
 
-watch(total, (val) => {
-  if (payments.value.length === 1) payments.value[0].amount = val + Number(tip.value.amount || 0)
+watch([totalAfterAdvance, () => tip.value.amount], () => {
+  if (payments.value.length === 1) payments.value[0].amount = totalAfterAdvance.value + Number(tip.value.amount || 0)
 })
 
 const addItem = (type, item) => {
@@ -197,6 +216,7 @@ const submit = async () => {
       tip: tip.value.amount || 0,
       tip_stylist_id: tip.value.stylist_id || null,
       payment_methods: payments.value.map(p => ({ method: p.method, amount: Number(p.amount) })),
+      advance_applied: advanceApplied.value,
     })
 
     completedSaleId.value = data.sale_id
@@ -211,6 +231,8 @@ const submit = async () => {
 }
 
 const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit: 'T. Debito', card_credit: 'T. Credito', other: 'Otro' }
+
+const printReceipt = () => window.open(`${base}/print/sale/${completedSaleId.value}`, '_blank', 'width=400,height=600')
 
 const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?'
 </script>
@@ -229,7 +251,12 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
           <h2 class="text-xl font-bold">Cobro completado</h2>
           <p class="text-2xl font-bold text-green-600">${{ total.toFixed(2) }}</p>
           <p v-if="change > 0" class="text-lg text-gray-600">Vuelto: ${{ change.toFixed(2) }}</p>
-          <Button @click="emit('close')">Cerrar</Button>
+          <div class="flex gap-2 justify-center">
+            <Button variant="outline" @click="printReceipt">
+              Imprimir recibo
+            </Button>
+            <Button @click="emit('close')">Cerrar</Button>
+          </div>
         </div>
 
         <!-- Checkout form -->
@@ -352,6 +379,24 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
                 </CardContent>
               </Card>
 
+              <!-- Client balance / Advance -->
+              <Card v-if="clientBalance > 0">
+                <CardContent class="pt-4">
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                    <p class="text-sm font-medium text-green-800">
+                      El cliente tiene ${{ clientBalance.toFixed(2) }} a favor
+                    </p>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="applyAdvance" class="rounded" />
+                      <span class="text-sm">Aplicar saldo al cobro</span>
+                    </label>
+                    <p v-if="applyAdvance" class="text-xs text-green-700">
+                      Total a cobrar: ${{ total.toFixed(2) }} → ${{ totalAfterAdvance.toFixed(2) }}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               <!-- Payment methods -->
               <Card>
                 <CardHeader class="pb-2">
@@ -412,7 +457,8 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
                     <div class="flex justify-between"><span class="text-gray-500">Base IVA 0%</span><span>${{ subtotal0.toFixed(2) }}</span></div>
                   </template>
                   <div class="flex justify-between"><span class="text-gray-500">IVA {{ globalIva }}%</span><span>${{ ivaAmount.toFixed(2) }}</span></div>
-                  <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Total</span><span>${{ total.toFixed(2) }}</span></div>
+                  <div v-if="advanceApplied > 0" class="flex justify-between text-green-600"><span>Anticipo aplicado</span><span>-${{ advanceApplied.toFixed(2) }}</span></div>
+                  <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Total</span><span>${{ totalAfterAdvance.toFixed(2) }}</span></div>
                   <div v-if="Number(tip.amount) > 0" class="flex justify-between text-gray-500"><span>Propina</span><span>+${{ Number(tip.amount).toFixed(2) }}</span></div>
 
                   <div class="border-t pt-3 mt-3 space-y-2">

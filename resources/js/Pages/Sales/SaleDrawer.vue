@@ -37,6 +37,9 @@ const initials = (n) => n?.split(' ').map(w => w?.[0]).filter(Boolean).join('').
 const st = (s) => s?.value || s || 'draft'
 const itemType = (t) => t?.value || t || 'service'
 const whatsappUrl = (phone) => `https://wa.me/593${phone?.replace(/^0/, '').replace(/\D/g, '')}`
+
+const printReceipt = () => window.open(`${base}/print/sale/${sale.value.id}`, '_blank', 'width=400,height=600')
+const printRide = () => window.open(`${base}/print/invoice/${sale.value.sri_invoice?.id}`, '_blank', 'width=400,height=600')
 </script>
 
 <template>
@@ -134,17 +137,23 @@ const whatsappUrl = (phone) => `https://wa.me/593${phone?.replace(/^0/, '').repl
           <!-- Invoice -->
           <div>
             <h3 class="text-sm font-medium text-gray-500 mb-2">Factura electronica</h3>
-            <div v-if="sale.sri_invoice" class="bg-green-50 rounded-lg p-3 text-sm space-y-1">
+            <div v-if="sale.sri_invoice" class="bg-green-50 rounded-lg p-3 text-sm space-y-2">
               <div class="flex items-center gap-2">
                 <Badge class="bg-green-200 text-green-800 text-xs">{{ sale.sri_invoice.status }}</Badge>
                 <span class="font-mono text-xs text-gray-500">{{ sale.sri_invoice.access_key?.slice(0, 20) }}...</span>
               </div>
+              <Button variant="outline" size="sm" class="w-full text-xs" @click="printRide">
+                Imprimir RIDE termico
+              </Button>
             </div>
             <p v-else class="text-sm text-gray-400">Sin comprobante generado</p>
           </div>
 
           <!-- Actions -->
           <div class="space-y-2 pt-2 border-t">
+            <Button variant="outline" class="w-full" @click="printReceipt">
+              Reimprimir recibo
+            </Button>
             <Button v-if="sale.client?.phone" variant="outline" class="w-full text-green-600 border-green-300" @click="window.open(whatsappUrl(sale.client.phone), '_blank')">
               Enviar por WhatsApp
             </Button>

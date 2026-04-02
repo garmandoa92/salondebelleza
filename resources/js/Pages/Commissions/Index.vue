@@ -43,6 +43,8 @@ const statusLabels = { pending: 'Pendiente', paid: 'Pagado', empty: 'Sin comisio
 const statusColors = { pending: 'bg-amber-100 text-amber-700', paid: 'bg-green-100 text-green-700', empty: 'bg-gray-100 text-gray-500' }
 
 const initials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+const printCommission = (stylistId) => window.open(`${base}/print/commission/${stylistId}?from=${periodStart.value}&to=${periodEnd.value}`, '_blank', 'width=400,height=600')
 </script>
 
 <template>
@@ -113,7 +115,10 @@ const initials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase()
               <td class="py-3 text-center">
                 <Badge :class="statusColors[s.status]" class="text-xs">{{ statusLabels[s.status] }}</Badge>
               </td>
-              <td class="py-3 text-right">
+              <td class="py-3 text-right space-x-1">
+                <Button variant="ghost" size="sm" class="text-xs" @click="printCommission(s.stylist_id)">
+                  Imprimir
+                </Button>
                 <Link :href="`${base}/comisiones/estilista/${s.stylist_id}?period_start=${periodStart}&period_end=${periodEnd}`">
                   <Button variant="ghost" size="sm" class="text-xs">Detalle</Button>
                 </Link>

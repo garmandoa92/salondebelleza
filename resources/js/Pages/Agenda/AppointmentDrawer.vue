@@ -69,6 +69,32 @@ const openCheckout = () => {
   emit('close')
 }
 
+// Advance modal
+const showAdvanceModal = ref(false)
+const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
+const savingAdvance = ref(false)
+
+const submitAdvance = async () => {
+  savingAdvance.value = true
+  try {
+    await axios.post(`${base}/advances`, {
+      client_id: apt.value.client_id,
+      appointment_id: apt.value.id,
+      type: 'advance',
+      amount: Number(advanceForm.value.amount),
+      payment_method: advanceForm.value.payment_method,
+      reference: advanceForm.value.reference || null,
+      notes: advanceForm.value.notes || null,
+    })
+    showAdvanceModal.value = false
+    advanceForm.value = { amount: '', payment_method: 'cash', reference: '', notes: '' }
+    // Reload appointment data
+    const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}`)
+    apt.value = data
+    emit('updated')
+  } finally { savingAdvance.value = false }
+}
+
 const completingPackage = ref(false)
 const completePackageSession = async () => {
   completingPackage.value = true
@@ -98,6 +124,8 @@ const initials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase(
 
 const status = computed(() => apt.value?.status?.value || apt.value?.status || 'pending')
 const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.value?.payment_status || 'pending')
+
+const printTicket = () => window.open(`${base}/print/appointment/${apt.value.id}`, '_blank', 'width=400,height=600')
 </script>
 
 <template>
@@ -177,6 +205,13 @@ const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.val
             <p v-if="apt.cancellation_reason" class="text-red-600">{{ apt.cancellation_reason }}</p>
           </div>
 
+          <!-- Advance badge -->
+          <div v-if="apt.advances?.length" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+            <p class="font-medium text-green-800">
+              Anticipo: ${{ apt.advances.reduce((s, a) => s + Number(a.amount), 0).toFixed(2) }} recibido
+            </p>
+          </div>
+
           <!-- Action buttons based on status -->
           <div class="space-y-2 pt-2 border-t">
             <template v-if="status === 'pending'">
@@ -219,6 +254,64 @@ const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.val
             <template v-else-if="status === 'cancelled' || status === 'no_show'">
               <p class="text-sm text-center text-gray-400">Cita {{ statusLabels[status]?.toLowerCase() }}</p>
             </template>
+
+            <!-- Print ticket (always visible except cancelled/no_show) -->
+            <Button v-if="status !== 'cancelled' && status !== 'no_show'"
+              variant="outline" class="w-full text-gray-600 border-gray-300"
+              @click="printTicket">
+              Ticket de cita
+            </Button>
+
+            <!-- Register advance (pending/confirmed only) -->
+            <Button v-if="status === 'pending' || status === 'confirmed'"
+              variant="outline" class="w-full text-green-600 border-green-300"
+              @click="showAdvanceModal = true">
+              + Registrar anticipo
+            </Button>
+          </div>
+
+          <!-- Advance modal -->
+          <div v-if="showAdvanceModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" @click.self="showAdvanceModal = false">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-5 space-y-4">
+              <h3 class="text-lg font-bold">Registrar anticipo</h3>
+              <div class="text-sm text-gray-500">
+                <p>Cliente: {{ apt.client?.first_name }} {{ apt.client?.last_name }}</p>
+                <p>Cita: {{ apt.service?.name }} · {{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }}</p>
+              </div>
+              <div class="space-y-3">
+                <div class="space-y-1">
+                  <label class="text-sm font-medium">Monto del anticipo</label>
+                  <input v-model="advanceForm.amount" type="number" min="0.01" step="0.01" placeholder="$0.00"
+                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-sm font-medium">Metodo de pago</label>
+                  <select v-model="advanceForm.payment_method" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                    <option value="cash">Efectivo</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="card_debit">T. Debito</option>
+                    <option value="card_credit">T. Credito</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-sm font-medium">Referencia (N° transferencia)</label>
+                  <input v-model="advanceForm.reference" placeholder="Opcional"
+                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-sm font-medium">Notas</label>
+                  <input v-model="advanceForm.notes" placeholder="Opcional"
+                    class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+                </div>
+              </div>
+              <div class="flex gap-2 pt-2">
+                <Button variant="outline" class="flex-1" @click="showAdvanceModal = false">Cancelar</Button>
+                <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="savingAdvance || !advanceForm.amount || Number(advanceForm.amount) <= 0" @click="submitAdvance">
+                  {{ savingAdvance ? 'Guardando...' : `Registrar anticipo $${Number(advanceForm.amount || 0).toFixed(2)}` }}
+                </Button>
+              </div>
+            </div>
           </div>
 
           <!-- Cancel form -->

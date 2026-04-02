@@ -137,11 +137,20 @@ const submitInvite = () => inviteForm.post(`${base}/settings/invite`, {
 })
 const toggleUser = (id) => router.patch(`${base}/settings/users/${id}/toggle`)
 
+// Printer form
+const printerForm = useForm({
+  printer_message: props.settings?.printer_message || 'Gracias por visitarnos! Te esperamos pronto.',
+  printer_show_logo: props.settings?.printer_show_logo ?? false,
+  printer_paper_size: props.settings?.printer_paper_size || '80mm',
+})
+const submitPrinter = () => printerForm.put(`${base}/settings/printer`)
+
 const tabs = [
   { key: 'salon', label: 'Mi salon' },
   { key: 'sri', label: 'SRI / Facturacion' },
   { key: 'booking', label: 'Reservas online' },
   { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'printer', label: 'Impresora' },
   { key: 'team', label: 'Equipo' },
   { key: 'billing', label: 'Suscripcion' },
 ]
@@ -495,6 +504,51 @@ const tabs = [
           </form>
           <p v-if="inviteForm.errors.email" class="text-sm text-red-500 mt-1">{{ inviteForm.errors.email }}</p>
         </div>
+      </CardContent>
+    </Card>
+
+    <!-- Tab: Printer -->
+    <Card v-if="activeTab === 'printer'">
+      <CardHeader><CardTitle class="text-base">Impresora / Tickets</CardTitle></CardHeader>
+      <CardContent>
+        <form @submit.prevent="submitPrinter" class="space-y-6">
+          <div class="space-y-2">
+            <Label>Mensaje del ticket</Label>
+            <textarea
+              v-model="printerForm.printer_message"
+              class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              rows="2"
+              maxlength="120"
+              placeholder="Gracias por visitarnos! Te esperamos pronto."
+            />
+            <p class="text-xs text-gray-400">{{ printerForm.printer_message?.length || 0 }}/120 caracteres. Aparece al pie de todos los tickets.</p>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Tamano de papel</Label>
+            <div class="flex gap-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="printerForm.printer_paper_size" value="58mm" class="rounded" />
+                <span class="text-sm">58mm</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="printerForm.printer_paper_size" value="80mm" class="rounded" />
+                <span class="text-sm">80mm</span>
+              </label>
+            </div>
+            <p class="text-xs text-gray-400">La mayoria de impresoras termicas usan 80mm. Las portatiles suelen usar 58mm.</p>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" v-model="printerForm.printer_show_logo" class="rounded" />
+              <span class="text-sm font-medium">Mostrar logo en tickets</span>
+            </label>
+            <p class="text-xs text-gray-400">El logo solo aparece si tu impresora soporta graficos. Las impresoras termicas basicas solo imprimen texto.</p>
+          </div>
+
+          <Button type="submit" :disabled="printerForm.processing">Guardar</Button>
+        </form>
       </CardContent>
     </Card>
 
