@@ -3,77 +3,88 @@
 namespace App\Services\Sri;
 
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\Process;
 
 class SriCertificateReader
 {
     /**
      * Read a .p12 certificate with legacy algorithm support.
-     * Ecuador SRI certificates use RC2-40-CBC which requires the legacy OpenSSL provider.
-     *
-     * @return array{certs: array, error: string|null}
+     * Ecuador SRI certificates use RC2-40-CBC which OpenSSL 3.x PHP module
+     * cannot read even with OPENSSL_CONF. We use the openssl CLI with -legacy flag.
      */
     public static function read(string $content, string $password): array
     {
-        Log::info('SriCertificateReader: intentando leer .p12', [
+        Log::info('SriCertificateReader: leyendo .p12', [
             'file_size' => strlen($content),
-            'password_length' => strlen($password),
-            'openssl_version' => OPENSSL_VERSION_TEXT,
         ]);
 
-        // Clear error queue
+        // Clear PHP OpenSSL error queue
         while (openssl_error_string() !== false) {}
 
+        // Try PHP native first (works for modern certificates)
         $certs = [];
-
-        // Try 1: standard read
         if (openssl_pkcs12_read($content, $certs, $password)) {
-            Log::info('SriCertificateReader: lectura standard exitosa');
+            Log::info('SriCertificateReader: lectura PHP nativa exitosa');
             return ['certs' => $certs, 'error' => null];
         }
 
-        $standardErrors = self::collectErrors();
-        Log::warning('SriCertificateReader: lectura standard fallo', ['errors' => $standardErrors]);
+        Log::info('SriCertificateReader: PHP nativo fallo, usando openssl CLI con -legacy');
 
-        // Try 2: with legacy provider
-        $legacyConf = config_path('openssl_legacy.cnf');
-        if (! file_exists($legacyConf)) {
-            Log::error('SriCertificateReader: openssl_legacy.cnf no existe en ' . $legacyConf);
-            return ['certs' => [], 'error' => 'Config legacy no encontrada. Errores: ' . implode('; ', $standardErrors)];
+        // Use openssl CLI with -legacy flag for SRI Ecuador certificates
+        $tmpP12 = tempnam(sys_get_temp_dir(), 'p12_');
+        $tmpPem = tempnam(sys_get_temp_dir(), 'pem_');
+
+        try {
+            file_put_contents($tmpP12, $content);
+
+            // Extract private key
+            $keyProcess = new Process([
+                'openssl', 'pkcs12',
+                '-in', $tmpP12,
+                '-passin', 'pass:' . $password,
+                '-nocerts', '-nodes', '-legacy',
+            ]);
+            $keyProcess->run();
+
+            if (! $keyProcess->isSuccessful()) {
+                $error = trim($keyProcess->getErrorOutput());
+                Log::error('SriCertificateReader: openssl key extraction fallo', ['error' => $error]);
+                return ['certs' => [], 'error' => $error ?: 'No se pudo extraer la llave privada'];
+            }
+            $privateKey = $keyProcess->getOutput();
+
+            // Extract certificate
+            $certProcess = new Process([
+                'openssl', 'pkcs12',
+                '-in', $tmpP12,
+                '-passin', 'pass:' . $password,
+                '-clcerts', '-nokeys', '-legacy',
+            ]);
+            $certProcess->run();
+
+            if (! $certProcess->isSuccessful()) {
+                $error = trim($certProcess->getErrorOutput());
+                Log::error('SriCertificateReader: openssl cert extraction fallo', ['error' => $error]);
+                return ['certs' => [], 'error' => $error ?: 'No se pudo extraer el certificado'];
+            }
+            $certificate = $certProcess->getOutput();
+
+            if (empty($privateKey) || empty($certificate)) {
+                return ['certs' => [], 'error' => 'Certificado o llave vacios. Verifique la contrasena.'];
+            }
+
+            Log::info('SriCertificateReader: lectura CLI exitosa');
+
+            return [
+                'certs' => [
+                    'pkey' => $privateKey,
+                    'cert' => $certificate,
+                ],
+                'error' => null,
+            ];
+        } finally {
+            @unlink($tmpP12);
+            @unlink($tmpPem);
         }
-
-        $originalConf = getenv('OPENSSL_CONF');
-        putenv('OPENSSL_CONF=' . $legacyConf);
-        Log::info('SriCertificateReader: reintentando con legacy provider', ['conf' => $legacyConf]);
-
-        while (openssl_error_string() !== false) {}
-
-        $result = openssl_pkcs12_read($content, $certs, $password);
-
-        // Restore
-        if ($originalConf !== false) {
-            putenv('OPENSSL_CONF=' . $originalConf);
-        } else {
-            putenv('OPENSSL_CONF');
-        }
-
-        if ($result) {
-            Log::info('SriCertificateReader: lectura con legacy exitosa');
-            return ['certs' => $certs, 'error' => null];
-        }
-
-        $legacyErrors = self::collectErrors();
-        Log::error('SriCertificateReader: lectura con legacy tambien fallo', ['errors' => $legacyErrors]);
-
-        $allErrors = array_merge($standardErrors, $legacyErrors);
-        return ['certs' => [], 'error' => implode('; ', $allErrors) ?: 'Error desconocido al leer el certificado'];
-    }
-
-    private static function collectErrors(): array
-    {
-        $errors = [];
-        while ($err = openssl_error_string()) {
-            $errors[] = $err;
-        }
-        return $errors;
     }
 }
