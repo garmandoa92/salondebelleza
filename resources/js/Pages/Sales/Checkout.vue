@@ -30,7 +30,18 @@ const discount = ref({ enabled: false, type: 'percentage', amount: 0, reason: ''
 const tip = ref({ amount: 0, stylist_id: '' })
 const payments = ref([{ method: 'cash', amount: 0, received: 0 }])
 const invoiceRequired = ref(false)
-const invoiceData = ref({ buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '' })
+const invoiceData = ref({
+  buyer_identification_type: 'final_consumer',
+  buyer_identification: '',
+  buyer_name: '',
+  buyer_email: '',
+  buyer_phone: '',
+  buyer_address: '',
+  buyer_commercial_name: '',
+  update_client: true,
+})
+const invoiceIdValid = ref(null) // null=empty, true=valid, false=invalid
+const invoiceClientFound = ref(null) // found client name or null
 const saving = ref(false)
 const completed = ref(false)
 const completedSaleId = ref(null)
@@ -60,6 +71,82 @@ watch(effectiveClientId, async (id) => {
     const { data } = await axios.get(`${base}/advances/client/${id}`)
     clientBalance.value = Number(data.balance) || 0
   } catch {}
+})
+
+// Ecuador cedula validation (modulo 10)
+const validateCedula = (c) => {
+  if (!c || c.length !== 10 || !/^\d{10}$/.test(c)) return false
+  const d = c.split('').map(Number)
+  const province = d[0] * 10 + d[1]
+  if (province < 1 || (province > 24 && province !== 30)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) {
+    let v = d[i] * (i % 2 === 0 ? 2 : 1)
+    if (v > 9) v -= 9
+    sum += v
+  }
+  return (10 - (sum % 10)) % 10 === d[9]
+}
+
+// Ecuador RUC validation (modulo 11)
+const validateRuc = (r) => {
+  if (!r || r.length !== 13 || !/^\d{13}$/.test(r)) return false
+  return r.endsWith('001') && validateCedula(r.substring(0, 10))
+}
+
+const isInvoiceIdType = (t) => t !== 'final_consumer'
+const needsIdValidation = computed(() => isInvoiceIdType(invoiceData.value.buyer_identification_type))
+
+// Watch identification number for validation + auto-complete
+watch(() => invoiceData.value.buyer_identification, async (val) => {
+  invoiceIdValid.value = null
+  invoiceClientFound.value = null
+  if (!val || !needsIdValidation.value) return
+
+  const type = invoiceData.value.buyer_identification_type
+  if (type === 'cedula' && val.length === 10) {
+    invoiceIdValid.value = validateCedula(val)
+  } else if (type === 'RUC' && val.length === 13) {
+    invoiceIdValid.value = validateRuc(val)
+  } else if (type === 'passport' && val.length >= 5) {
+    invoiceIdValid.value = true
+  }
+
+  // Auto-complete from DB if valid
+  if (invoiceIdValid.value && val.length >= 5) {
+    try {
+      const { data } = await axios.get(`${base}/agenda/search-clients`, { params: { q: val } })
+      if (data.length) {
+        const c = data[0]
+        invoiceClientFound.value = `${c.first_name} ${c.last_name}`
+        if (!invoiceData.value.buyer_name) invoiceData.value.buyer_name = `${c.first_name} ${c.last_name}`
+        if (!invoiceData.value.buyer_email && c.email) invoiceData.value.buyer_email = c.email
+        if (!invoiceData.value.buyer_phone && c.phone) invoiceData.value.buyer_phone = c.phone
+      }
+    } catch {}
+  }
+})
+
+// Reset invoice fields when type changes
+watch(() => invoiceData.value.buyer_identification_type, () => {
+  invoiceData.value.buyer_identification = ''
+  invoiceData.value.buyer_name = ''
+  invoiceData.value.buyer_email = ''
+  invoiceData.value.buyer_phone = ''
+  invoiceData.value.buyer_address = ''
+  invoiceData.value.buyer_commercial_name = ''
+  invoiceIdValid.value = null
+  invoiceClientFound.value = null
+})
+
+// Auto-fill from appointment client when toggle activated
+watch(invoiceRequired, (val) => {
+  if (!val) return
+  const clientId = effectiveClientId.value
+  if (!clientId) return
+  // Try to find client data from search results or props
+  const name = isFromAppointment.value ? props.clientName : selectedClientName.value
+  if (name) invoiceData.value.buyer_name = name
 })
 
 watch(clientSearch, (val) => {
@@ -102,7 +189,9 @@ watch(() => props.open, (val) => {
     tip.value = { amount: 0, stylist_id: '' }
     payments.value = [{ method: 'cash', amount: 0, received: 0 }]
     invoiceRequired.value = false
-    invoiceData.value = { buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '' }
+    invoiceData.value = { buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '', buyer_phone: '', buyer_address: '', buyer_commercial_name: '', update_client: true }
+    invoiceIdValid.value = null
+    invoiceClientFound.value = null
     selectedClientId.value = props.clientId || null
     selectedClientName.value = props.clientName || null
     clientSearch.value = ''
@@ -471,96 +560,94 @@ const typeLabel = (t) => ({ service: 'Servicio', product: 'Producto', package: '
                 </p>
               </div>
 
-              <!-- Payment method -->
-              <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-semibold text-gray-900">Metodo de pago</h3>
-                  <button v-if="payments.length < 4" @click="addPaymentMethod" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">+ Agregar metodo</button>
-                </div>
-
-                <!-- Payment chips -->
-                <div v-if="payments.length === 1" class="flex gap-2 flex-wrap">
-                  <button v-for="m in paymentMethods" :key="m.key" @click="setPaymentMethod(m.key)"
-                    :class="['px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all',
-                      payments[0].method === m.key
-                        ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50']">
-                    <span class="mr-1.5">{{ m.icon }}</span>{{ m.label }}
-                  </button>
-                </div>
-
-                <!-- Payment rows -->
-                <div class="space-y-3">
-                  <div v-for="(p, i) in payments" :key="i" class="space-y-2">
-                    <div class="flex items-center gap-2">
-                      <select v-if="payments.length > 1" v-model="p.method" class="flex-1 text-sm border rounded-lg px-3 py-2 bg-gray-50">
-                        <option v-for="(label, key) in paymentLabels" :key="key" :value="key">{{ label }}</option>
-                      </select>
-                      <div class="relative" :class="payments.length > 1 ? 'w-32' : 'flex-1'">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                        <Input v-model="p.amount" type="number" step="0.01" class="pl-7" placeholder="0.00" />
-                      </div>
-                      <button v-if="payments.length > 1" @click="removePayment(i)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                      </button>
-                    </div>
-                    <!-- Cash: received + change -->
-                    <div v-if="p.method === 'cash'" class="flex items-center gap-3 pl-1">
-                      <div class="relative flex-1">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Recibido $</span>
-                        <Input v-model="p.received" type="number" step="0.01" class="pl-20 text-sm" placeholder="0.00" />
-                      </div>
-                      <p v-if="change > 0" class="text-sm font-semibold text-green-600 whitespace-nowrap">Vuelto: ${{ change.toFixed(2) }}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Payment status -->
-                <div class="flex items-center gap-2 pt-1">
-                  <span v-if="paymentDiff > 0.01" class="flex items-center gap-1.5 text-sm font-medium text-red-500">
-                    <span class="w-2 h-2 rounded-full bg-red-500"></span>Falta: ${{ paymentDiff.toFixed(2) }}
-                  </span>
-                  <span v-else-if="paymentDiff < -0.01" class="flex items-center gap-1.5 text-sm font-medium text-amber-500">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}
-                  </span>
-                  <span v-else class="flex items-center gap-1.5 text-sm font-medium text-green-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Correcto
-                  </span>
-                </div>
-              </div>
-
               <!-- Invoice toggle -->
-              <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
-                <label class="flex items-center gap-3 cursor-pointer">
-                  <div :class="['relative w-11 h-6 rounded-full transition-colors', invoiceRequired ? 'bg-primary' : 'bg-gray-200']" @click="invoiceRequired = !invoiceRequired">
-                    <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', invoiceRequired ? 'translate-x-[22px]' : 'translate-x-0.5']"></div>
-                  </div>
-                  <span class="text-sm font-semibold text-gray-700">Comprobante electronico</span>
-                </label>
-                <div v-if="invoiceRequired" class="space-y-3 pt-1">
+              <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div class="p-5">
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <div :class="['relative w-11 h-6 rounded-full transition-colors', invoiceRequired ? 'bg-primary' : 'bg-gray-200']" @click="invoiceRequired = !invoiceRequired">
+                      <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', invoiceRequired ? 'translate-x-[22px]' : 'translate-x-0.5']"></div>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-700">Comprobante electronico</span>
+                  </label>
+                </div>
+
+                <div v-if="invoiceRequired" class="border-t px-5 pb-5 pt-4 space-y-4">
+                  <!-- Row 1: Tipo + Numero -->
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="text-xs text-gray-500 mb-1 block">Tipo identificacion</label>
                       <select v-model="invoiceData.buyer_identification_type" class="w-full text-sm border rounded-lg px-3 py-2 bg-gray-50">
                         <option value="final_consumer">Consumidor final</option>
-                        <option value="cedula">Cedula</option>
-                        <option value="RUC">RUC</option>
-                        <option value="passport">Pasaporte</option>
+                        <option value="cedula">Cedula (05)</option>
+                        <option value="RUC">RUC (04)</option>
+                        <option value="passport">Pasaporte (06)</option>
                       </select>
                     </div>
                     <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
-                      <label class="text-xs text-gray-500 mb-1 block">Numero</label>
-                      <Input v-model="invoiceData.buyer_identification" placeholder="0912345678" />
+                      <label class="text-xs text-gray-500 mb-1 block">
+                        {{ invoiceData.buyer_identification_type === 'RUC' ? 'Numero de RUC' : invoiceData.buyer_identification_type === 'cedula' ? 'Numero de cedula' : 'Numero de pasaporte' }}
+                      </label>
+                      <div class="relative">
+                        <Input v-model="invoiceData.buyer_identification"
+                          :placeholder="invoiceData.buyer_identification_type === 'RUC' ? '0912345678001' : invoiceData.buyer_identification_type === 'cedula' ? '0912345678' : 'AB1234567'"
+                          :maxlength="invoiceData.buyer_identification_type === 'RUC' ? 13 : invoiceData.buyer_identification_type === 'cedula' ? 10 : 20"
+                          :class="[invoiceIdValid === true ? 'border-green-400 ring-1 ring-green-200' : invoiceIdValid === false ? 'border-red-400 ring-1 ring-red-200' : '']" />
+                        <!-- Validation icon -->
+                        <div v-if="invoiceIdValid === true" class="absolute right-2.5 top-1/2 -translate-y-1/2">
+                          <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div v-else-if="invoiceIdValid === false" class="absolute right-2.5 top-1/2 -translate-y-1/2">
+                          <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </div>
+                      </div>
+                      <p v-if="invoiceIdValid === false" class="text-[11px] text-red-500 mt-1">Numero invalido</p>
+                      <p v-if="invoiceClientFound" class="text-[11px] text-green-600 mt-1">Cliente encontrado: {{ invoiceClientFound }}</p>
                     </div>
                   </div>
-                  <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
-                    <label class="text-xs text-gray-500 mb-1 block">Nombre / Razon social</label>
-                    <Input v-model="invoiceData.buyer_name" placeholder="Nombre completo" />
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500 mb-1 block">Email (para enviar RIDE)</label>
-                    <Input v-model="invoiceData.buyer_email" type="email" placeholder="correo@ejemplo.com" />
-                  </div>
+
+                  <!-- Consumidor final: no more fields -->
+                  <template v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
+                    <!-- Row 2: Nombre / Razon social -->
+                    <div>
+                      <label class="text-xs text-gray-500 mb-1 block">
+                        {{ invoiceData.buyer_identification_type === 'RUC' ? 'Razon social' : 'Nombre completo' }}
+                      </label>
+                      <Input v-model="invoiceData.buyer_name"
+                        :placeholder="invoiceData.buyer_identification_type === 'RUC' ? 'EMPRESA S.A.' : 'Nombre y apellido'" />
+                    </div>
+
+                    <!-- Nombre comercial (solo RUC) -->
+                    <div v-if="invoiceData.buyer_identification_type === 'RUC'">
+                      <label class="text-xs text-gray-500 mb-1 block">Nombre comercial (opcional)</label>
+                      <Input v-model="invoiceData.buyer_commercial_name" placeholder="Nombre comercial" />
+                    </div>
+
+                    <!-- Row 3: Email + Telefono -->
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Email (para enviar RIDE)</label>
+                        <Input v-model="invoiceData.buyer_email" type="email" placeholder="correo@ejemplo.com" />
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Telefono</label>
+                        <Input v-model="invoiceData.buyer_phone" placeholder="09..." />
+                      </div>
+                    </div>
+
+                    <!-- Row 4: Direccion -->
+                    <div>
+                      <label class="text-xs text-gray-500 mb-1 block">
+                        Direccion {{ invoiceData.buyer_identification_type === 'RUC' ? '' : '(opcional)' }}
+                      </label>
+                      <Input v-model="invoiceData.buyer_address" placeholder="Direccion del comprador" />
+                    </div>
+
+                    <!-- Update client checkbox -->
+                    <label v-if="effectiveClientId && (invoiceData.buyer_email || invoiceData.buyer_phone || invoiceData.buyer_address)" class="flex items-center gap-2 cursor-pointer pt-1">
+                      <input type="checkbox" v-model="invoiceData.update_client" class="rounded border-gray-300" />
+                      <span class="text-xs text-gray-500">Actualizar estos datos en la ficha del cliente</span>
+                    </label>
+                  </template>
                 </div>
               </div>
             </div>
@@ -587,6 +674,63 @@ const typeLabel = (t) => ({ service: 'Servicio', product: 'Producto', package: '
                     <span class="text-2xl font-bold text-gray-900">${{ totalAfterAdvance.toFixed(2) }}</span>
                   </div>
                   <div v-if="Number(tip.amount) > 0" class="flex justify-between text-sm text-gray-400 mt-1"><span>+ Propina</span><span>${{ Number(tip.amount).toFixed(2) }}</span></div>
+                </div>
+
+                <!-- Payment method -->
+                <div class="border-t pt-3 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Metodo de pago</p>
+                    <button v-if="payments.length < 4" @click="addPaymentMethod" class="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition">+ Agregar</button>
+                  </div>
+
+                  <!-- Chips -->
+                  <div v-if="payments.length === 1" class="grid grid-cols-2 gap-1.5">
+                    <button v-for="m in paymentMethods" :key="m.key" @click="setPaymentMethod(m.key)"
+                      :class="['px-2 py-2 rounded-lg text-xs font-medium border transition-all text-center',
+                        payments[0].method === m.key
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-gray-200 text-gray-500 hover:border-gray-300']">
+                      <span class="mr-1">{{ m.icon }}</span>{{ m.label }}
+                    </button>
+                  </div>
+
+                  <!-- Amount rows -->
+                  <div class="space-y-2">
+                    <div v-for="(p, i) in payments" :key="i" class="space-y-1.5">
+                      <div class="flex items-center gap-1.5">
+                        <select v-if="payments.length > 1" v-model="p.method" class="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-gray-50">
+                          <option v-for="(label, key) in paymentLabels" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                        <div class="relative" :class="payments.length > 1 ? 'w-24' : 'flex-1'">
+                          <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                          <Input v-model="p.amount" type="number" step="0.01" class="pl-6 h-9 text-sm" placeholder="0.00" />
+                        </div>
+                        <button v-if="payments.length > 1" @click="removePayment(i)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 transition">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                      <div v-if="p.method === 'cash'" class="space-y-1">
+                        <div class="relative">
+                          <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">Recibido $</span>
+                          <Input v-model="p.received" type="number" step="0.01" class="pl-[72px] h-8 text-sm" placeholder="0.00" />
+                        </div>
+                        <p v-if="change > 0" class="text-sm font-semibold text-green-600">Vuelto: ${{ change.toFixed(2) }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Status -->
+                  <div class="flex items-center gap-1.5">
+                    <span v-if="paymentDiff > 0.01" class="flex items-center gap-1 text-xs font-medium text-red-500">
+                      <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Falta: ${{ paymentDiff.toFixed(2) }}
+                    </span>
+                    <span v-else-if="paymentDiff < -0.01" class="flex items-center gap-1 text-xs font-medium text-amber-500">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}
+                    </span>
+                    <span v-else class="flex items-center gap-1 text-xs font-medium text-green-600">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Correcto
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Tip -->

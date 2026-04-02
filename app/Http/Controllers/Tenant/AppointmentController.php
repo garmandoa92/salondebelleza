@@ -234,7 +234,7 @@ class AppointmentController extends Controller
             ->orWhere('phone', 'like', "%{$q}%")
             ->orWhere('cedula', 'like', "%{$q}%")
             ->limit(10)
-            ->get(['id', 'first_name', 'last_name', 'phone', 'allergies', 'visit_count', 'last_visit_at']);
+            ->get(['id', 'first_name', 'last_name', 'phone', 'email', 'cedula', 'allergies', 'visit_count', 'last_visit_at']);
 
         return response()->json($clients);
     }
