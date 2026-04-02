@@ -29,7 +29,7 @@ class SriAccessKeyGenerator
         $env = $environment === 'production' ? '2' : '1';
         $numericCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
 
-        $base = $date . $docType . $ruc . $env . $establishment . $emissionPoint . $sequential . '1' . $numericCode;
+        $base = $date . $docType . $ruc . $env . $establishment . $emissionPoint . $sequential . $numericCode . '1';
 
         $checkDigit = $this->calculateMod11($base);
         $accessKey = $base . $checkDigit;
@@ -37,7 +37,7 @@ class SriAccessKeyGenerator
         // Ensure uniqueness
         while (SriInvoice::where('access_key', $accessKey)->exists()) {
             $numericCode = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
-            $base = $date . $docType . $ruc . $env . $establishment . $emissionPoint . $sequential . '1' . $numericCode;
+            $base = $date . $docType . $ruc . $env . $establishment . $emissionPoint . $sequential . $numericCode . '1';
             $checkDigit = $this->calculateMod11($base);
             $accessKey = $base . $checkDigit;
         }

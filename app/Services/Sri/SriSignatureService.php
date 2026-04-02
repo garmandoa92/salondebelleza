@@ -154,7 +154,7 @@ class SriSignatureService
             $doc,
             XMLSecurityDSig::SHA1,
             ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-            ['force_uri' => true, 'uri' => '', 'overwrite' => false, 'id_name' => 'Id', 'id_value' => $refId]
+            ['force_uri' => true, 'uri' => '#comprobante', 'overwrite' => false, 'id_name' => 'Id', 'id_value' => $refId]
         );
 
         // Create key
