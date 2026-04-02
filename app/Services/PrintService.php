@@ -305,11 +305,14 @@ class PrintService
         // Items with code, qty x price format
         $itemsHtml = '';
         foreach ($invoice->sale?->items ?? [] as $item) {
-            $qty = number_format((float) $item->quantity, 2);
-            $price = number_format((float) $item->unit_price, 2);
+            $qty = (float) $item->quantity;
             $sub = number_format((float) $item->subtotal, 2);
-            $itemsHtml .= '<div class="section-title">' . e($item->name) . '</div>'
-                . "<div>{$qty} x \${$price} \${$sub}</div>";
+            $name = e($item->name);
+            if ($qty > 1) {
+                $itemsHtml .= "<div class=\"line\"><span>{$name} x" . (int) $qty . "</span><span>\${$sub}</span></div>";
+            } else {
+                $itemsHtml .= "<div class=\"line\"><span>{$name}</span><span>\${$sub}</span></div>";
+            }
         }
 
         // Totals breakdown
