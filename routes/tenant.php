@@ -133,6 +133,7 @@ Route::prefix('/salon/{tenant}')->middleware([
 
         // Sales / Checkout
         Route::get('ventas', [SaleController::class, 'index'])->name('tenant.sales.index');
+        Route::get('ventas/nueva', [SaleController::class, 'create'])->name('tenant.sales.create');
         Route::get('ventas/summary', [SaleController::class, 'summary'])->name('tenant.sales.summary');
         Route::get('ventas/checkout-data', [SaleController::class, 'checkoutData'])->name('tenant.sales.checkout-data');
         Route::post('ventas', [SaleController::class, 'store'])->name('tenant.sales.store');

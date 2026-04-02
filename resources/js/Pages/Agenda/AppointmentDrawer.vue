@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { usePage, router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -50,23 +50,7 @@ const doAction = async (action) => {
 const isPackageSession = computed(() => !!apt.value?.client_package_item_id)
 
 const openCheckout = () => {
-  emit('checkout', {
-    appointmentId: apt.value.id,
-    clientId: apt.value.client_id,
-    clientName: apt.value.client ? `${apt.value.client.first_name} ${apt.value.client.last_name}` : null,
-    preItems: [{
-      type: 'service',
-      reference_id: apt.value.service?.id,
-      name: apt.value.service?.name,
-      quantity: 1,
-      unit_price: Number(apt.value.service?.base_price || 0),
-      subtotal: Number(apt.value.service?.base_price || 0),
-      iva_amount: 0,
-      discount_amount: 0,
-      stylist_id: apt.value.stylist_id,
-    }],
-  })
-  emit('close')
+  router.visit(`${base}/ventas/nueva?appointment_id=${apt.value.id}`)
 }
 
 // Advance modal

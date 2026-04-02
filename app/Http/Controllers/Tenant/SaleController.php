@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
+use App\Models\Package;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\Service;
@@ -42,6 +44,44 @@ class SaleController extends Controller
             'sales' => $query->paginate(25),
             'summary' => $this->saleService->getDaySummary(),
             'filters' => $request->only('status', 'date_from', 'date_to'),
+        ]);
+    }
+
+    public function create(Request $request)
+    {
+        $appointment = null;
+        $preClient = null;
+        $preItems = [];
+
+        if ($request->filled('appointment_id')) {
+            $appointment = Appointment::with(['client:id,first_name,last_name,phone', 'service:id,name,base_price,iva_rate', 'stylist:id,name'])
+                ->find($request->appointment_id);
+
+            if ($appointment) {
+                $preClient = $appointment->client;
+                $preItems = [[
+                    'type' => 'service',
+                    'reference_id' => $appointment->service?->id,
+                    'name' => $appointment->service?->name,
+                    'quantity' => 1,
+                    'unit_price' => (float) ($appointment->service?->base_price ?? 0),
+                    'subtotal' => (float) ($appointment->service?->base_price ?? 0),
+                    'iva_rate' => $appointment->service?->iva_rate,
+                    'iva_amount' => 0,
+                    'discount_amount' => 0,
+                    'stylist_id' => $appointment->stylist_id,
+                ]];
+            }
+        }
+
+        return Inertia::render('Sales/Create', [
+            'services' => Service::where('is_visible', true)->get(['id', 'name', 'base_price', 'iva_rate', 'duration_minutes']),
+            'products' => Product::where('is_active', true)->where('type', 'sale')->get(['id', 'name', 'sale_price', 'iva_rate', 'stock']),
+            'packages' => Package::where('is_active', true)->orderBy('name')->get(['id', 'name', 'price', 'type']),
+            'stylists' => Stylist::where('is_active', true)->get(['id', 'name', 'color']),
+            'appointmentId' => $appointment?->id,
+            'preClient' => $preClient,
+            'preItems' => $preItems,
         ]);
     }
 
