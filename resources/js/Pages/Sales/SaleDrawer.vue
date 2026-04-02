@@ -44,6 +44,7 @@ const openWhatsapp = () => {
   const s = sale.value
   const name = s.client ? `${s.client.first_name}` : ''
   const inv = s.sri_invoice
+  const appUrl = page.props.appUrl || window.location.origin
   let msg = `Hola ${name}, gracias por tu visita!\n\nTotal: $${Number(s.total).toFixed(2)}`
   if (inv) {
     const num = `${inv.establishment}-${inv.emission_point}-${inv.sequential}`
@@ -51,6 +52,7 @@ const openWhatsapp = () => {
     if (inv.sri_authorization_number) {
       msg += `\nAutorizacion SRI: ${inv.sri_authorization_number}`
     }
+    msg += `\n\nVer factura: ${appUrl}${base}/print/invoice/${inv.id}`
   }
   msg += `\n\nTe esperamos pronto!`
   const phone = `593${s.client?.phone?.replace(/^0/, '').replace(/\D/g, '')}`
