@@ -402,8 +402,10 @@ class PrintService
     <title>{$title}</title>
     <style>
         @media print {
-            @page { size: {$paperSize} auto; margin: 2mm; }
+            @page { size: {$paperSize} 2000mm; margin: 0; }
             .no-print { display: none !important; }
+            html, body { margin: 0; padding: 0; width: {$paperSize}; }
+            .ticket { padding: 2mm; width: {$width}; }
         }
         @media screen {
             body { display: flex; flex-direction: column; align-items: center; background: #f3f4f6; padding: 20px; }
