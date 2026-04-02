@@ -94,7 +94,6 @@ class SriSignatureService
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->loadXML($xml);
 
-        // CRITICAL: Register the 'id' attribute as an ID for getElementById to work
         $root = $doc->documentElement;
         $root->setIdAttribute('id', true);
 
@@ -106,13 +105,38 @@ class SriSignatureService
 
         $dsNs = 'http://www.w3.org/2000/09/xmldsig#';
         $etsiNs = 'http://uri.etsi.org/01903/v1.3.2#';
+        $c14nAlgo = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
+        $sha1Algo = 'http://www.w3.org/2000/09/xmldsig#sha1';
+        $rsaSha1Algo = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+        $envelopedAlgo = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
 
-        // === STEP 1: Digest of the comprobante (all XML without Signature) ===
+        // PASO 1: Digest del comprobante (antes de insertar Signature)
         $digestComprobante = base64_encode(sha1($doc->C14N(false, false), true));
         Log::info('SRI Firma: DigestValue comprobante', ['digest' => $digestComprobante]);
 
-        // === STEP 2: Build KeyInfo ===
-        $keyInfoXml = '<ds:KeyInfo xmlns:ds="' . $dsNs . '" Id="' . $keyInfoId . '">'
+        // PASO 2: Construir Signature COMPLETO con placeholders
+        // Los digests de KeyInfo y SignedProperties se recalculan EN CONTEXTO del documento
+        // para que la C14N inclusiva incluya xmlns:etsi heredado del padre ds:Signature
+        $sigXml = '<ds:Signature xmlns:ds="' . $dsNs . '" xmlns:etsi="' . $etsiNs . '" Id="' . $sigId . '">'
+            . '<ds:SignedInfo Id="' . $sigId . '-SignedInfo">'
+            . '<ds:CanonicalizationMethod Algorithm="' . $c14nAlgo . '"/>'
+            . '<ds:SignatureMethod Algorithm="' . $rsaSha1Algo . '"/>'
+            . '<ds:Reference Id="' . $refCompId . '" URI="#comprobante">'
+            . '<ds:Transforms><ds:Transform Algorithm="' . $envelopedAlgo . '"/></ds:Transforms>'
+            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
+            . '<ds:DigestValue>' . $digestComprobante . '</ds:DigestValue>'
+            . '</ds:Reference>'
+            . '<ds:Reference URI="#' . $keyInfoId . '">'
+            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
+            . '<ds:DigestValue>PLACEHOLDER</ds:DigestValue>'
+            . '</ds:Reference>'
+            . '<ds:Reference Type="http://uri.etsi.org/01903#SignedProperties" URI="#' . $signedPropsId . '">'
+            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
+            . '<ds:DigestValue>PLACEHOLDER</ds:DigestValue>'
+            . '</ds:Reference>'
+            . '</ds:SignedInfo>'
+            . '<ds:SignatureValue Id="' . $sigId . '-SignatureValue"></ds:SignatureValue>'
+            . '<ds:KeyInfo Id="' . $keyInfoId . '">'
             . '<ds:X509Data>'
             . '<ds:X509Certificate>' . $k['certBase64'] . '</ds:X509Certificate>'
             . '</ds:X509Data>'
@@ -120,19 +144,14 @@ class SriSignatureService
             . '<ds:Modulus>' . $this->getModulus($k['certPem']) . '</ds:Modulus>'
             . '<ds:Exponent>' . $this->getExponent($k['certPem']) . '</ds:Exponent>'
             . '</ds:RSAKeyValue></ds:KeyValue>'
-            . '</ds:KeyInfo>';
-
-        $kiDoc = new \DOMDocument();
-        $kiDoc->loadXML($keyInfoXml);
-        $digestKeyInfo = base64_encode(sha1($kiDoc->documentElement->C14N(false, false), true));
-        Log::info('SRI Firma: DigestValue KeyInfo', ['digest' => $digestKeyInfo]);
-
-        // === STEP 3: Build SignedProperties ===
-        $signedPropsXml = '<etsi:SignedProperties xmlns:etsi="' . $etsiNs . '" xmlns:ds="' . $dsNs . '" Id="' . $signedPropsId . '">'
+            . '</ds:KeyInfo>'
+            . '<ds:Object Id="' . $sigId . '-Object">'
+            . '<etsi:QualifyingProperties Target="#' . $sigId . '">'
+            . '<etsi:SignedProperties Id="' . $signedPropsId . '">'
             . '<etsi:SignedSignatureProperties>'
             . '<etsi:SigningTime>' . $signingTime . '</etsi:SigningTime>'
             . '<etsi:SigningCertificate><etsi:Cert><etsi:CertDigest>'
-            . '<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>'
+            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
             . '<ds:DigestValue>' . $k['certDigest'] . '</ds:DigestValue>'
             . '</etsi:CertDigest><etsi:IssuerSerial>'
             . '<ds:X509IssuerName>' . htmlspecialchars($k['issuer']) . '</ds:X509IssuerName>'
@@ -145,76 +164,68 @@ class SriSignatureService
             . '<etsi:MimeType>text/xml</etsi:MimeType>'
             . '</etsi:DataObjectFormat>'
             . '</etsi:SignedDataObjectProperties>'
-            . '</etsi:SignedProperties>';
+            . '</etsi:SignedProperties>'
+            . '</etsi:QualifyingProperties>'
+            . '</ds:Object>'
+            . '</ds:Signature>';
 
-        $spDoc = new \DOMDocument();
-        $spDoc->loadXML('<wrapper xmlns:etsi="' . $etsiNs . '" xmlns:ds="' . $dsNs . '">' . $signedPropsXml . '</wrapper>');
-        $spNode = $spDoc->documentElement->firstChild;
-        $digestSignedProps = base64_encode(sha1($spNode->C14N(false, false), true));
-        Log::info('SRI Firma: DigestValue SignedProperties', ['digest' => $digestSignedProps]);
+        // PASO 3: Insertar Signature en el documento como ultimo hijo del root
+        $sigFragment = $doc->createDocumentFragment();
+        $sigFragment->appendXML($sigXml);
+        $doc->documentElement->appendChild($sigFragment);
 
-        // === STEP 4: Build SignedInfo with 3 references ===
-        $c14nAlgo = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
-        $sha1Algo = 'http://www.w3.org/2000/09/xmldsig#sha1';
-        $rsaSha1Algo = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
-        $envelopedAlgo = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
+        // PASO 4: XPath para queries en contexto
+        $xpath = new \DOMXPath($doc);
+        $xpath->registerNamespace('ds', $dsNs);
+        $xpath->registerNamespace('etsi', $etsiNs);
 
-        $signedInfoXml = '<ds:SignedInfo xmlns:ds="' . $dsNs . '" Id="' . $sigId . '-SignedInfo">'
-            . '<ds:CanonicalizationMethod Algorithm="' . $c14nAlgo . '"/>'
-            . '<ds:SignatureMethod Algorithm="' . $rsaSha1Algo . '"/>'
-            // Ref 1: comprobante
-            . '<ds:Reference Id="' . $refCompId . '" URI="#comprobante">'
-            . '<ds:Transforms><ds:Transform Algorithm="' . $envelopedAlgo . '"/></ds:Transforms>'
-            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
-            . '<ds:DigestValue>' . $digestComprobante . '</ds:DigestValue>'
-            . '</ds:Reference>'
-            // Ref 2: KeyInfo
-            . '<ds:Reference URI="#' . $keyInfoId . '">'
-            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
-            . '<ds:DigestValue>' . $digestKeyInfo . '</ds:DigestValue>'
-            . '</ds:Reference>'
-            // Ref 3: SignedProperties
-            . '<ds:Reference Type="http://uri.etsi.org/01903#SignedProperties" URI="#' . $signedPropsId . '">'
-            . '<ds:DigestMethod Algorithm="' . $sha1Algo . '"/>'
-            . '<ds:DigestValue>' . $digestSignedProps . '</ds:DigestValue>'
-            . '</ds:Reference>'
-            . '</ds:SignedInfo>';
+        // PASO 5: Calcular digest de KeyInfo EN CONTEXTO del documento
+        // (hereda xmlns:etsi del padre ds:Signature — C14N inclusiva lo incluye)
+        $keyInfoNode = $xpath->query('//ds:KeyInfo[@Id="' . $keyInfoId . '"]')->item(0);
+        $digestKeyInfo = base64_encode(sha1($keyInfoNode->C14N(false, false), true));
+        Log::info('SRI Firma: DigestValue KeyInfo (en contexto)', ['digest' => $digestKeyInfo]);
 
-        // === STEP 5: Canonicalize SignedInfo and sign with RSA-SHA1 ===
-        $siDoc = new \DOMDocument();
-        $siDoc->loadXML($signedInfoXml);
-        $signedInfoC14n = $siDoc->documentElement->C14N(false, false);
+        // PASO 6: Calcular digest de SignedProperties EN CONTEXTO del documento
+        $signedPropsNode = $xpath->query('//etsi:SignedProperties[@Id="' . $signedPropsId . '"]')->item(0);
+        $digestSignedProps = base64_encode(sha1($signedPropsNode->C14N(false, false), true));
+        Log::info('SRI Firma: DigestValue SignedProperties (en contexto)', ['digest' => $digestSignedProps]);
+
+        // PASO 7: Reemplazar placeholders con digests reales
+        $refs = $xpath->query('//ds:SignedInfo/ds:Reference');
+        foreach ($refs as $ref) {
+            $uri = $ref->getAttribute('URI');
+            $dvNode = $xpath->query('ds:DigestValue', $ref)->item(0);
+            if ($uri === '#' . $keyInfoId) {
+                $this->setNodeText($doc, $dvNode, $digestKeyInfo);
+            } elseif ($uri === '#' . $signedPropsId) {
+                $this->setNodeText($doc, $dvNode, $digestSignedProps);
+            }
+        }
+
+        // PASO 8: Canonicalizar SignedInfo EN CONTEXTO y firmar con RSA-SHA1
+        $signedInfoNode = $xpath->query('//ds:SignedInfo')->item(0);
+        $signedInfoC14n = $signedInfoNode->C14N(false, false);
 
         $pkey = openssl_pkey_get_private($k['privateKeyPem']);
         if (! $pkey) throw new \RuntimeException('No se pudo cargar clave privada');
 
         openssl_sign($signedInfoC14n, $signature, $pkey, OPENSSL_ALGO_SHA1);
         $signatureValue = base64_encode($signature);
-        Log::info('SRI Firma: RSA-SHA1 generada');
+        Log::info('SRI Firma: RSA-SHA1 generada (en contexto)');
 
-        // === STEP 6: Assemble complete Signature node ===
-        // Remove xmlns declarations from sub-elements (inherited from ds:Signature parent)
-        $signedInfoClean = str_replace(' xmlns:ds="' . $dsNs . '"', '', $signedInfoXml);
-        $keyInfoClean = str_replace(' xmlns:ds="' . $dsNs . '"', '', $keyInfoXml);
-        $signedPropsClean = str_replace([' xmlns:etsi="' . $etsiNs . '"', ' xmlns:ds="' . $dsNs . '"'], '', $signedPropsXml);
-
-        $sigXml = '<ds:Signature xmlns:ds="' . $dsNs . '" xmlns:etsi="' . $etsiNs . '" Id="' . $sigId . '">'
-            . $signedInfoClean
-            . '<ds:SignatureValue Id="' . $sigId . '-SignatureValue">' . $signatureValue . '</ds:SignatureValue>'
-            . $keyInfoClean
-            . '<ds:Object Id="' . $sigId . '-Object">'
-            . '<etsi:QualifyingProperties Target="#' . $sigId . '">'
-            . $signedPropsClean
-            . '</etsi:QualifyingProperties>'
-            . '</ds:Object>'
-            . '</ds:Signature>';
-
-        // === STEP 7: Insert Signature as last child of root ===
-        $sigFragment = $doc->createDocumentFragment();
-        $sigFragment->appendXML($sigXml);
-        $doc->documentElement->appendChild($sigFragment);
+        // PASO 9: Establecer SignatureValue
+        $sigValueNode = $xpath->query('//ds:SignatureValue')->item(0);
+        $this->setNodeText($doc, $sigValueNode, $signatureValue);
 
         return $doc->saveXML();
+    }
+
+    private function setNodeText(\DOMDocument $doc, \DOMNode $node, string $text): void
+    {
+        while ($node->firstChild) {
+            $node->removeChild($node->firstChild);
+        }
+        $node->appendChild($doc->createTextNode($text));
     }
 
     private function verifyLocally(string $signedXml, string $certPem): void
