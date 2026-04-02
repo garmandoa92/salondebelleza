@@ -46,8 +46,8 @@ class SriXmlGenerator
         $env = $invoice->environment instanceof \BackedEnum ? $invoice->environment->value : $invoice->environment;
         $this->addElement($doc, $infoTrib, 'ambiente', $env === 'production' ? '2' : '1');
         $this->addElement($doc, $infoTrib, 'tipoEmision', '1');
-        $this->addElement($doc, $infoTrib, 'razonSocial', $tenantConfig['razon_social'] ?? 'SALON');
-        $this->addElement($doc, $infoTrib, 'nombreComercial', $tenantConfig['nombre_comercial'] ?? $tenantConfig['razon_social'] ?? 'SALON');
+        $this->addElement($doc, $infoTrib, 'razonSocial', mb_strtoupper($tenantConfig['razon_social'] ?? 'SALON'));
+        $this->addElement($doc, $infoTrib, 'nombreComercial', mb_strtoupper($tenantConfig['nombre_comercial'] ?? $tenantConfig['razon_social'] ?? 'SALON'));
         $this->addElement($doc, $infoTrib, 'ruc', $tenantConfig['ruc'] ?? '0000000000001');
         $this->addElement($doc, $infoTrib, 'claveAcceso', $invoice->access_key);
         $this->addElement($doc, $infoTrib, 'codDoc', $codDoc);
@@ -71,7 +71,8 @@ class SriXmlGenerator
         $this->addElement($doc, $infoFact, 'dirEstablecimiento', $tenantConfig['direccion_matriz'] ?? 'Ecuador');
         $this->addElement($doc, $infoFact, 'obligadoContabilidad', $tenantConfig['obligado_contabilidad'] ?? 'NO');
 
-        $buyerIdCode = $this->buyerIdCodes[$invoice->buyer_identification_type->value ?? 'final_consumer'] ?? '07';
+        $buyerIdType = $invoice->buyer_identification_type instanceof \BackedEnum ? $invoice->buyer_identification_type->value : $invoice->buyer_identification_type;
+        $buyerIdCode = $this->buyerIdCodes[$buyerIdType ?? 'final_consumer'] ?? '07';
         $this->addElement($doc, $infoFact, 'tipoIdentificacionComprador', $buyerIdCode);
         $this->addElement($doc, $infoFact, 'razonSocialComprador', $invoice->buyer_name ?? 'CONSUMIDOR FINAL');
         $this->addElement($doc, $infoFact, 'identificacionComprador', $invoice->buyer_identification ?? '9999999999999');
