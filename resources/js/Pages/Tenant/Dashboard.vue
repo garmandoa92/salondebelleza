@@ -46,8 +46,10 @@ const statusColors = {
         <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p class="text-sm text-gray-500">{{ new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
       </div>
-      <div class="flex gap-2">
-        <Link :href="`${base}/agenda`"><Button variant="outline" size="sm" class="border-[1.5px] border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-5)]">Ir a agenda</Button></Link>
+      <div class="flex gap-2 flex-wrap justify-end">
+        <Link :href="`${base}/comisiones`"><Button variant="ghost" size="sm" class="text-gray-600">Ver comisiones</Button></Link>
+        <Link :href="`${base}/clientes/create`"><Button variant="outline" size="sm" class="border-[1.5px] border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-5)]">+ Nuevo cliente</Button></Link>
+        <Link :href="`${base}/agenda`"><Button variant="outline" size="sm" class="border-[1.5px] border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-5)]">+ Nueva cita</Button></Link>
         <Link :href="`${base}/ventas`"><Button size="sm">Ver caja</Button></Link>
       </div>
     </div>
@@ -220,14 +222,6 @@ const statusColors = {
           </CardContent>
         </Card>
 
-        <!-- Quick actions -->
-        <Card>
-          <CardContent class="pt-4 space-y-2">
-            <Link :href="`${base}/agenda`" class="block"><Button variant="outline" size="sm" class="w-full justify-start">+ Nueva cita</Button></Link>
-            <Link :href="`${base}/clientes/create`" class="block"><Button variant="outline" size="sm" class="w-full justify-start">+ Nuevo cliente</Button></Link>
-            <Link :href="`${base}/comisiones`" class="block"><Button variant="outline" size="sm" class="w-full justify-start">Ver comisiones</Button></Link>
-          </CardContent>
-        </Card>
       </div>
     </div>
   </div>
