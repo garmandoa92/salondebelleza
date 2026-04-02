@@ -176,6 +176,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::put('settings/salon', [SettingsController::class, 'updateSalon'])->name('tenant.settings.salon');
         Route::put('settings/appearance', [SettingsController::class, 'updateAppearance'])->name('tenant.settings.appearance');
         Route::put('settings/sri', [SettingsController::class, 'updateSri'])->name('tenant.settings.sri');
+        Route::put('settings/sequential', [SettingsController::class, 'updateSequential'])->name('tenant.settings.sequential');
         Route::post('settings/certificate', [SettingsController::class, 'uploadCertificate'])->name('tenant.settings.certificate');
         Route::put('settings/schedule', [SettingsController::class, 'updateSchedule'])->name('tenant.settings.schedule');
         Route::put('settings/booking', [SettingsController::class, 'updateBooking'])->name('tenant.settings.booking');

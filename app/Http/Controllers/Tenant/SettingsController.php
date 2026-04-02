@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use App\Models\SriInvoice;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -18,12 +19,17 @@ class SettingsController extends Controller
         $users = User::with('roles')->where('is_active', true)->get();
         $roles = Role::all(['id', 'name']);
 
+        $settings = $tenant->settings ?? [];
+        $est = $settings['establecimiento'] ?? '001';
+        $pto = $settings['punto_emision'] ?? '001';
+
         return Inertia::render('Settings/Index', [
             'tenant' => $tenant,
-            'settings' => $tenant->settings ?? [],
+            'settings' => $settings,
             'users' => $users,
             'roles' => $roles,
-            'hasCertificate' => ! empty($tenant->settings['sri_certificate_uploaded']),
+            'hasCertificate' => ! empty($settings['sri_certificate_uploaded']),
+            'sequentials' => $this->getSequentials($est, $pto, $settings),
         ]);
     }
 
@@ -218,5 +224,82 @@ class SettingsController extends Controller
         $user->update(['is_active' => ! $user->is_active]);
 
         return back()->with('success', $user->is_active ? 'Usuario activado.' : 'Usuario desactivado.');
+    }
+
+    public function updateSequential(Request $request)
+    {
+        $data = $request->validate([
+            'type' => ['required', 'in:invoice,sales_note,credit_note'],
+            'next_sequential' => ['required', 'string', 'size:9', 'regex:/^\d{9}$/'],
+        ]);
+
+        $settings = tenant()->settings ?? [];
+        $est = $settings['establecimiento'] ?? '001';
+        $pto = $settings['punto_emision'] ?? '001';
+
+        // Validate not less than last emitted
+        $lastSeq = \App\Models\SriInvoice::where('invoice_type', $data['type'])
+            ->where('establishment', $est)
+            ->where('emission_point', $pto)
+            ->max('sequential') ?? '000000000';
+
+        if ($data['next_sequential'] <= $lastSeq) {
+            return back()->withErrors(['next_sequential' => "No puedes usar un numero menor o igual al ultimo emitido ({$lastSeq}). Esto causaria duplicados en el SRI."]);
+        }
+
+        $settings['sequential_override_' . $data['type']] = $data['next_sequential'];
+        tenant()->update(['settings' => $settings]);
+
+        return back()->with('success', 'Secuencial corregido.');
+    }
+
+    private function getSequentials(string $est, string $pto, array $settings): array
+    {
+        $types = [
+            ['key' => 'invoice', 'label' => 'Facturas'],
+            ['key' => 'sales_note', 'label' => 'Notas de venta'],
+            ['key' => 'credit_note', 'label' => 'Notas de credito'],
+        ];
+
+        $monthStart = now()->startOfMonth()->toDateString();
+        $result = [];
+
+        foreach ($types as $type) {
+            $lastSeq = \App\Models\SriInvoice::where('invoice_type', $type['key'])
+                ->where('establishment', $est)
+                ->where('emission_point', $pto)
+                ->max('sequential') ?? '000000000';
+
+            $override = $settings['sequential_override_' . $type['key']] ?? null;
+            $nextSeq = $override ?? str_pad((int) $lastSeq + 1, 9, '0', STR_PAD_LEFT);
+
+            $monthCount = \App\Models\SriInvoice::where('invoice_type', $type['key'])
+                ->where('establishment', $est)
+                ->where('emission_point', $pto)
+                ->where('issue_date', '>=', $monthStart)
+                ->count();
+
+            $lastInvoice = \App\Models\SriInvoice::where('invoice_type', $type['key'])
+                ->where('establishment', $est)
+                ->where('emission_point', $pto)
+                ->orderByDesc('created_at')
+                ->first(['sequential', 'issue_date', 'total']);
+
+            $result[] = [
+                'key' => $type['key'],
+                'label' => $type['label'],
+                'last_sequential' => $lastSeq,
+                'next_sequential' => $nextSeq,
+                'has_override' => (bool) $override,
+                'month_count' => $monthCount,
+                'last_invoice' => $lastInvoice ? [
+                    'sequential' => $lastInvoice->sequential,
+                    'date' => $lastInvoice->issue_date,
+                    'total' => $lastInvoice->total,
+                ] : null,
+            ];
+        }
+
+        return $result;
     }
 }

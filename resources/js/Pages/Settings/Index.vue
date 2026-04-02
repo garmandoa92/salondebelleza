@@ -16,6 +16,7 @@ const props = defineProps({
   settings: Object,
   users: Array,
   roles: Array,
+  sequentials: { type: Array, default: () => [] },
   hasCertificate: Boolean,
 })
 
@@ -70,6 +71,20 @@ const previewColors = () => {
   root.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`)
 }
 const submitAppearance = () => appearanceForm.put(`${base}/settings/appearance`)
+
+// Sequential correction
+const showSeqModal = ref(false)
+const seqForm = useForm({ type: '', next_sequential: '' })
+const seqLabel = ref('')
+const openSeqModal = (seq) => {
+  seqForm.type = seq.key
+  seqForm.next_sequential = seq.next_sequential
+  seqLabel.value = seq.label
+  showSeqModal.value = true
+}
+const submitSeq = () => seqForm.put(`${base}/settings/sequential`, {
+  onSuccess: () => { showSeqModal.value = false },
+})
 
 // Certificate info
 const showCertForm = ref(false)
@@ -329,6 +344,55 @@ const tabs = [
           <Button v-else variant="outline" size="sm" @click="showCertForm = true">Reemplazar certificado</Button>
         </CardContent>
       </Card>
+
+      <!-- Sequentials -->
+      <Card>
+        <CardHeader><CardTitle class="text-base">Numeracion de comprobantes</CardTitle></CardHeader>
+        <CardContent class="space-y-4">
+          <div class="grid grid-cols-2 gap-4 text-sm mb-2">
+            <div><span class="text-gray-500">Establecimiento:</span> <span class="font-mono font-medium">{{ settings?.establecimiento || '001' }}</span></div>
+            <div><span class="text-gray-500">Punto de emision:</span> <span class="font-mono font-medium">{{ settings?.punto_emision || '001' }}</span></div>
+          </div>
+
+          <div v-for="seq in sequentials" :key="seq.key" class="border rounded-lg p-3 space-y-1">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-medium">{{ seq.label }}</h4>
+              <Button variant="ghost" size="sm" class="text-xs h-7" @click="openSeqModal(seq)">Corregir secuencial</Button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div><span class="text-gray-500">Ultimo emitido:</span> <span class="font-mono">{{ seq.last_sequential }}</span></div>
+              <div><span class="text-gray-500">Proximo:</span> <span class="font-mono font-medium">{{ seq.next_sequential }}</span>
+                <Badge v-if="seq.has_override" class="ml-1 bg-amber-100 text-amber-700 text-[10px] px-1 py-0">manual</Badge>
+              </div>
+            </div>
+            <div class="text-xs text-gray-400">
+              {{ seq.month_count }} emitidas este mes
+              <span v-if="seq.last_invoice"> · Ultimo: {{ seq.last_invoice.sequential }} ({{ seq.last_invoice.date }}) ${{ Number(seq.last_invoice.total).toFixed(2) }}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- Sequential correction modal -->
+    <div v-if="showSeqModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showSeqModal = false">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <h3 class="font-semibold">Correccion de secuencial</h3>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+          Solo usa esto si hay una diferencia entre el sistema y los registros del SRI.
+        </div>
+        <div class="text-sm"><span class="text-gray-500">Tipo:</span> <span class="font-medium">{{ seqLabel }}</span></div>
+        <div class="space-y-2">
+          <Label>Proximo numero a emitir</Label>
+          <Input v-model="seqForm.next_sequential" maxlength="9" class="font-mono" placeholder="000000046" />
+          <p v-if="seqForm.errors.next_sequential" class="text-sm text-red-500">{{ seqForm.errors.next_sequential }}</p>
+          <p class="text-xs text-gray-400">9 digitos con ceros a la izquierda</p>
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button variant="outline" @click="showSeqModal = false">Cancelar</Button>
+          <Button :disabled="seqForm.processing" @click="submitSeq">Guardar correccion</Button>
+        </div>
+      </div>
     </div>
 
     <!-- Tab: Booking -->
