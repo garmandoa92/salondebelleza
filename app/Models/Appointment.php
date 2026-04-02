@@ -18,6 +18,8 @@ class Appointment extends Model
         'client_id',
         'stylist_id',
         'service_id',
+        'branch_id',
+        'client_package_item_id',
         'starts_at',
         'ends_at',
         'status',

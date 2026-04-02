@@ -16,6 +16,7 @@ class Sale extends Model
     protected $fillable = [
         'appointment_id',
         'client_id',
+        'branch_id',
         'subtotal',
         'discount_amount',
         'discount_type',
