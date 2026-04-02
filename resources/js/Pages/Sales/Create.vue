@@ -240,7 +240,7 @@ onMounted(() => {
     <!-- Content: two columns -->
     <div class="flex-1 overflow-hidden flex">
       <!-- LEFT COLUMN (scrollable) -->
-      <div class="flex-1 overflow-y-auto px-4 pt-0 pb-6 space-y-4">
+      <div class="flex-1 overflow-y-auto px-5 pt-3 pb-6 space-y-4">
 
         <!-- 1. CLIENT -->
         <div class="bg-white rounded-xl shadow-sm border p-5">
