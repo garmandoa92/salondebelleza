@@ -125,8 +125,9 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Today's agenda -->
       <div class="lg:col-span-2">
-        <Card>
-          <CardHeader class="pb-3">
+        <Card class="overflow-hidden">
+          <!-- Fixed header -->
+          <CardHeader class="pb-3 border-b">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <CardTitle class="text-base font-medium">Agenda de hoy</CardTitle>
@@ -135,58 +136,60 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
               <Link :href="`${base}/agenda`" class="text-sm font-medium hover:underline" style="color: var(--color-primary);">Ver completa</Link>
             </div>
           </CardHeader>
-          <CardContent class="space-y-2">
-            <template v-if="today_agenda?.length">
-              <template v-for="stylist in today_agenda" :key="stylist.id">
-                <!-- Stylist with appointments -->
-                <div v-if="stylist.appointments?.length" class="bg-gray-50/80 rounded-xl overflow-hidden">
-                  <!-- Stylist header -->
-                  <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
-                    <div class="flex items-center gap-2">
-                      <span class="w-3 h-3 rounded-full ring-2 ring-white" :style="{ backgroundColor: stylist.color }" />
-                      <span class="text-sm font-semibold text-gray-900">{{ stylist.name }}</span>
+
+          <!-- Scrollable list -->
+          <div class="relative">
+            <div class="max-h-[480px] overflow-y-auto scroll-smooth" style="scrollbar-width: thin;">
+              <template v-if="today_agenda?.length">
+                <template v-for="stylist in today_agenda" :key="stylist.id">
+                  <!-- Stylist with appointments -->
+                  <template v-if="stylist.appointments?.length">
+                    <div class="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100">
+                      <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: stylist.color }" />
+                      <span class="text-xs font-semibold text-gray-700">{{ stylist.name }}</span>
+                      <span class="text-[10px] text-gray-400">— {{ stylist.appointments.length }} cita{{ stylist.appointments.length > 1 ? 's' : '' }}</span>
                     </div>
-                    <span class="text-[11px] text-gray-500">{{ stylist.appointments.length }} cita{{ stylist.appointments.length > 1 ? 's' : '' }}</span>
-                  </div>
-                  <!-- Appointments -->
-                  <div class="divide-y divide-gray-100">
                     <div
                       v-for="apt in stylist.appointments"
                       :key="apt.id"
-                      :class="['px-4 py-3 transition-colors', aptStatus(apt) === 'in_progress' ? 'bg-[#F4F9F7] border-l-[3px]' : 'border-l-[3px] border-l-transparent']"
+                      :class="['flex items-center gap-3 px-4 h-10 border-b border-gray-50 text-sm hover:bg-gray-50/50 transition-colors',
+                        aptStatus(apt) === 'in_progress' ? 'bg-[#F4F9F7] border-l-[3px]' : 'border-l-[3px] border-l-transparent']"
                       :style="aptStatus(apt) === 'in_progress' ? { borderLeftColor: 'var(--color-primary)' } : {}"
                     >
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="flex-1 min-w-0">
-                          <div class="flex items-center gap-2 mb-0.5">
-                            <span class="text-sm font-bold" style="color: var(--color-primary);">{{ formatTime(apt.starts_at) }}</span>
-                            <span v-if="isNow(apt)" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500 text-white uppercase">Ahora</span>
-                          </div>
-                          <p class="text-sm font-semibold text-gray-900">{{ apt.client?.first_name }} {{ apt.client?.last_name }}</p>
-                          <p class="text-xs text-gray-500">{{ apt.service?.name }}</p>
-                        </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                          <span :class="[statusBadge(aptStatus(apt)), 'text-[10px] font-semibold px-2 py-0.5 rounded-full']">{{ statusLabel(aptStatus(apt)) }}</span>
-                          <Button v-if="aptStatus(apt) === 'pending'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-blue-600" @click="confirmAppointment(apt.id)">Confirmar</Button>
-                          <Button v-if="aptStatus(apt) === 'confirmed'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-green-600" @click="startAppointment(apt.id)">Llego</Button>
-                          <Button v-if="aptStatus(apt) === 'in_progress'" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-green-700" @click="completeAppointment(apt.id)">Completar</Button>
-                          <Button v-if="aptStatus(apt) === 'in_progress' || (aptStatus(apt) === 'completed' && apt.payment_status !== 'paid')" variant="ghost" size="sm" class="text-[11px] h-6 px-2 text-amber-600" @click="goCheckout(apt.id)">Cobrar</Button>
-                        </div>
+                      <!-- Time -->
+                      <span class="w-14 shrink-0 text-xs font-bold" style="color: var(--color-primary);">
+                        {{ formatTime(apt.starts_at) }}
+                        <span v-if="isNow(apt)" class="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      </span>
+                      <!-- Client -->
+                      <span class="w-28 shrink-0 text-sm font-medium text-gray-900 truncate">{{ apt.client?.first_name }} {{ apt.client?.last_name?.charAt(0) }}.</span>
+                      <!-- Service -->
+                      <span class="flex-1 text-xs text-gray-500 truncate">{{ apt.service?.name }}</span>
+                      <!-- Status + Action -->
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span :class="[statusBadge(aptStatus(apt)), 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap']">{{ statusLabel(aptStatus(apt)) }}</span>
+                        <button v-if="aptStatus(apt) === 'pending' || aptStatus(apt) === 'confirmed'" @click="startAppointment(apt.id)"
+                          class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 hover:bg-green-100 transition">Llego</button>
+                        <button v-else-if="aptStatus(apt) === 'in_progress'" @click="completeAppointment(apt.id)"
+                          class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 hover:bg-green-100 transition">Completar</button>
+                        <button v-else-if="aptStatus(apt) === 'completed' && apt.payment_status !== 'paid'" @click="goCheckout(apt.id)"
+                          class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition">Cobrar</button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </template>
 
-                <!-- Stylist without appointments (compact) -->
-                <div v-else class="flex items-center gap-2 px-4 py-2 text-gray-400">
-                  <span class="w-2.5 h-2.5 rounded-full opacity-40" :style="{ backgroundColor: stylist.color }" />
-                  <span class="text-sm">{{ stylist.name }}</span>
-                  <span class="text-xs">— Sin citas hoy</span>
-                </div>
+                  <!-- Stylist without appointments -->
+                  <div v-else class="flex items-center gap-2 px-4 h-8 text-gray-400 border-b border-gray-50">
+                    <span class="w-2 h-2 rounded-full opacity-40" :style="{ backgroundColor: stylist.color }" />
+                    <span class="text-xs">{{ stylist.name }} — Sin citas</span>
+                  </div>
+                </template>
               </template>
-            </template>
-            <p v-else class="text-sm text-gray-400 text-center py-6">Sin citas para hoy</p>
-          </CardContent>
+              <p v-else class="text-sm text-gray-400 text-center py-8">Sin citas para hoy</p>
+            </div>
+            <!-- Fade gradient at bottom -->
+            <div v-if="totalCitas > 8" class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          </div>
         </Card>
       </div>
 
