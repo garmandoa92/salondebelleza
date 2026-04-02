@@ -419,48 +419,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- 5. PAYMENT -->
-        <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">Metodo de pago</h3>
-            <button v-if="payments.length < 4" @click="addPaymentMethod" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">+ Agregar metodo</button>
-          </div>
-          <div v-if="payments.length === 1" class="grid grid-cols-4 gap-2">
-            <button v-for="m in paymentMethods" :key="m.key" @click="setPaymentMethod(m.key)"
-              :class="['px-2 py-2.5 rounded-xl text-xs font-medium border-2 transition-all text-center',
-                payments[0].method === m.key ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-500 hover:border-gray-300']">
-              <span class="mr-1">{{ m.icon }}</span>{{ m.label }}
-            </button>
-          </div>
-          <div class="space-y-3">
-            <div v-for="(p, i) in payments" :key="i" class="space-y-1.5">
-              <div class="flex items-center gap-2">
-                <select v-if="payments.length > 1" v-model="p.method" class="flex-1 text-sm border rounded-lg px-3 py-2 bg-gray-50">
-                  <option v-for="m in paymentMethods" :key="m.key" :value="m.key">{{ m.icon }} {{ m.label }}</option>
-                </select>
-                <div class="relative" :class="payments.length > 1 ? 'w-32' : 'flex-1'">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                  <Input v-model="p.amount" type="number" step="0.01" class="pl-7" placeholder="0.00" />
-                </div>
-                <button v-if="payments.length > 1" @click="removePayment(i)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
-              <div v-if="p.method === 'cash'" class="flex items-center gap-3">
-                <div class="relative flex-1">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Recibido $</span>
-                  <Input v-model="p.received" type="number" step="0.01" class="pl-20 text-sm" placeholder="0.00" />
-                </div>
-                <p v-if="change > 0" class="text-sm font-semibold text-green-600 whitespace-nowrap">Vuelto: ${{ change.toFixed(2) }}</p>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span v-if="paymentDiff > 0.01" class="flex items-center gap-1.5 text-sm font-medium text-red-500"><span class="w-2 h-2 rounded-full bg-red-500"></span>Falta: ${{ paymentDiff.toFixed(2) }}</span>
-            <span v-else-if="paymentDiff < -0.01" class="flex items-center gap-1.5 text-sm font-medium text-amber-500"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}</span>
-            <span v-else class="flex items-center gap-1.5 text-sm font-medium text-green-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Correcto</span>
-          </div>
-        </div>
       </div>
 
       <!-- RIGHT COLUMN (sticky) -->
@@ -482,6 +440,49 @@ onMounted(() => {
             <div class="border-t pt-3 mt-3">
               <div class="flex justify-between items-baseline"><span class="text-gray-700 font-semibold">Total</span><span class="text-2xl font-bold text-gray-900">${{ totalAfterAdvance.toFixed(2) }}</span></div>
               <div v-if="Number(tip.amount) > 0" class="flex justify-between text-sm text-gray-400 mt-1"><span>+ Propina</span><span>${{ Number(tip.amount).toFixed(2) }}</span></div>
+            </div>
+          </div>
+
+          <!-- Payment method -->
+          <div class="border-t pt-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Metodo de pago</p>
+              <button v-if="payments.length < 4" @click="addPaymentMethod" class="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">+ Agregar</button>
+            </div>
+            <div v-if="payments.length === 1" class="grid grid-cols-2 gap-1.5">
+              <button v-for="m in paymentMethods" :key="m.key" @click="setPaymentMethod(m.key)"
+                :class="['px-2 py-2 rounded-lg text-xs font-medium border transition-all text-center',
+                  payments[0].method === m.key ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-500 hover:border-gray-300']">
+                <span class="mr-1">{{ m.icon }}</span>{{ m.label }}
+              </button>
+            </div>
+            <div class="space-y-2">
+              <div v-for="(p, i) in payments" :key="i" class="space-y-1.5">
+                <div class="flex items-center gap-1.5">
+                  <select v-if="payments.length > 1" v-model="p.method" class="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-gray-50">
+                    <option v-for="m in paymentMethods" :key="m.key" :value="m.key">{{ m.icon }} {{ m.label }}</option>
+                  </select>
+                  <div class="relative" :class="payments.length > 1 ? 'w-24' : 'flex-1'">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                    <Input v-model="p.amount" type="number" step="0.01" class="pl-6 h-9 text-sm" placeholder="0.00" />
+                  </div>
+                  <button v-if="payments.length > 1" @click="removePayment(i)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div v-if="p.method === 'cash'" class="space-y-1">
+                  <div class="relative">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">Recibido $</span>
+                    <Input v-model="p.received" type="number" step="0.01" class="pl-[72px] h-8 text-sm" placeholder="0.00" />
+                  </div>
+                  <p v-if="change > 0" class="text-sm font-semibold text-green-600">Vuelto: ${{ change.toFixed(2) }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span v-if="paymentDiff > 0.01" class="flex items-center gap-1 text-xs font-medium text-red-500"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Falta: ${{ paymentDiff.toFixed(2) }}</span>
+              <span v-else-if="paymentDiff < -0.01" class="flex items-center gap-1 text-xs font-medium text-amber-500"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Exceso: ${{ Math.abs(paymentDiff).toFixed(2) }}</span>
+              <span v-else class="flex items-center gap-1 text-xs font-medium text-green-600"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Correcto</span>
             </div>
           </div>
 
