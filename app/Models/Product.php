@@ -21,6 +21,7 @@ class Product extends Model
         'unit',
         'cost_price',
         'sale_price',
+        'iva_rate',
         'stock',
         'min_stock',
         'supplier',

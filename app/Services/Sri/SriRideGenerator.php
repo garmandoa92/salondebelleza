@@ -60,8 +60,9 @@ class SriRideGenerator
         if ((float) $invoice->subtotal_0 > 0) {
             $html .= '<p>Subtotal IVA 0%: $' . number_format((float) $invoice->subtotal_0, 2) . '</p>';
         }
-        $html .= '<p>Subtotal IVA 15%: $' . number_format((float) $invoice->subtotal_iva, 2) . '</p>';
-        $html .= '<p>IVA 15%: $' . number_format((float) $invoice->iva_amount, 2) . '</p>';
+        $ivaLabel = number_format((float) $invoice->iva_rate, 0) . '%';
+        $html .= '<p>Subtotal IVA ' . $ivaLabel . ': $' . number_format((float) $invoice->subtotal_iva, 2) . '</p>';
+        $html .= '<p>IVA ' . $ivaLabel . ': $' . number_format((float) $invoice->iva_amount, 2) . '</p>';
         $html .= '<p><strong>TOTAL: $' . number_format((float) $invoice->total, 2) . '</strong></p>';
         $html .= '</div>';
 

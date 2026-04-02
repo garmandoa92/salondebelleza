@@ -191,8 +191,9 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-EC', { day: '2-
         </div>
 
         <div class="border-t pt-3 text-sm">
-          <div class="flex justify-between"><span class="text-gray-500">Subtotal IVA 15%</span><span>${{ Number(detailInvoice.subtotal_iva).toFixed(2) }}</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">IVA 15%</span><span>${{ Number(detailInvoice.iva_amount).toFixed(2) }}</span></div>
+          <div v-if="Number(detailInvoice.subtotal_0) > 0" class="flex justify-between"><span class="text-gray-500">Subtotal IVA 0%</span><span>${{ Number(detailInvoice.subtotal_0).toFixed(2) }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Subtotal IVA {{ detailInvoice.iva_rate || 15 }}%</span><span>${{ Number(detailInvoice.subtotal_iva).toFixed(2) }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">IVA {{ detailInvoice.iva_rate || 15 }}%</span><span>${{ Number(detailInvoice.iva_amount).toFixed(2) }}</span></div>
           <div class="flex justify-between font-bold text-base border-t pt-1 mt-1"><span>Total</span><span>${{ Number(detailInvoice.total).toFixed(2) }}</span></div>
         </div>
 

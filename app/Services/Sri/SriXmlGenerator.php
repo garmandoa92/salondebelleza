@@ -73,7 +73,7 @@ class SriXmlGenerator
         if ((float) $invoice->subtotal_iva > 0) {
             $totalImp = $doc->createElement('totalImpuesto');
             $this->addElement($doc, $totalImp, 'codigo', '2');
-            $this->addElement($doc, $totalImp, 'codigoPorcentaje', '4');
+            $this->addElement($doc, $totalImp, 'codigoPorcentaje', ivaCode((float) $invoice->iva_rate));
             $this->addElement($doc, $totalImp, 'baseImponible', number_format((float) $invoice->subtotal_iva, 2, '.', ''));
             $this->addElement($doc, $totalImp, 'valor', number_format((float) $invoice->iva_amount, 2, '.', ''));
             $totalImpuestos->appendChild($totalImp);
@@ -119,9 +119,10 @@ class SriXmlGenerator
 
             $impuestos = $doc->createElement('impuestos');
             $impuesto = $doc->createElement('impuesto');
+            $itemIvaRate = (float) ($item['iva_rate'] ?? tenantIva());
             $this->addElement($doc, $impuesto, 'codigo', '2');
-            $this->addElement($doc, $impuesto, 'codigoPorcentaje', '4');
-            $this->addElement($doc, $impuesto, 'tarifa', '15.00');
+            $this->addElement($doc, $impuesto, 'codigoPorcentaje', ivaCode($itemIvaRate));
+            $this->addElement($doc, $impuesto, 'tarifa', number_format($itemIvaRate, 2, '.', ''));
             $this->addElement($doc, $impuesto, 'baseImponible', number_format((float) $item['subtotal'], 2, '.', ''));
             $this->addElement($doc, $impuesto, 'valor', number_format((float) ($item['iva_amount'] ?? 0), 2, '.', ''));
             $impuestos->appendChild($impuesto);

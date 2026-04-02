@@ -81,6 +81,7 @@ class SettingsController extends Controller
             'punto_emision' => ['required', 'string', 'size:3'],
             'regimen_tributario' => ['nullable', 'in:general,rimpe_emprendedor,rimpe_negocio_popular'],
             'obligado_contabilidad' => ['nullable', 'in:SI,NO'],
+            'iva_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $tenant = tenant();

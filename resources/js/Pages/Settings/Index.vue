@@ -78,6 +78,7 @@ const sriForm = useForm({
   punto_emision: props.settings?.punto_emision || '001',
   regimen_tributario: props.settings?.regimen_tributario || 'general',
   obligado_contabilidad: props.settings?.obligado_contabilidad || 'NO',
+  iva_rate: props.settings?.iva_rate ?? 15,
 })
 
 // Certificate
@@ -248,6 +249,22 @@ const tabs = [
                 <option value="NO">NO</option>
                 <option value="SI">SI</option>
               </select>
+            </div>
+            <div class="space-y-2 pt-4 border-t">
+              <Label>Tarifa IVA general (%)</Label>
+              <div class="flex items-center gap-2">
+                <div class="flex gap-1">
+                  <Button v-for="r in [0, 12, 15]" :key="r" type="button" size="sm"
+                    :variant="Number(sriForm.iva_rate) === r ? 'default' : 'outline'" class="text-xs"
+                    @click="sriForm.iva_rate = r">{{ r }}%</Button>
+                </div>
+                <Input v-model="sriForm.iva_rate" type="number" min="0" max="100" step="0.01" class="w-20" />
+                <span class="text-sm text-gray-500">%</span>
+              </div>
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 mt-2">
+                <p class="font-medium">Aviso importante</p>
+                <p class="mt-1">La configuracion incorrecta del IVA puede resultar en sanciones del SRI. Usa 15% si no estas seguro. Consulta con tu contador antes de cambiar este valor.</p>
+              </div>
             </div>
             <Button type="submit" :disabled="sriForm.processing">Guardar</Button>
           </form>

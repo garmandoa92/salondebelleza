@@ -16,6 +16,7 @@ class Service extends Model
         'name',
         'description',
         'base_price',
+        'iva_rate',
         'duration_minutes',
         'preparation_minutes',
         'recipe',

@@ -103,6 +103,10 @@ onMounted(async () => {
   if (props.preItems.length) items.value = props.preItems.map(i => ({ ...i }))
 })
 
+const globalIva = computed(() => page.props.tenantIva || 15)
+
+const getItemIva = (item) => item.iva_rate ?? globalIva.value
+
 const subtotal = computed(() => items.value.reduce((sum, i) => sum + Number(i.subtotal || 0), 0))
 const discountAmount = computed(() => {
   if (!discount.value.enabled) return 0
@@ -110,7 +114,16 @@ const discountAmount = computed(() => {
   return Number(discount.value.amount)
 })
 const baseImponible = computed(() => Math.max(0, subtotal.value - discountAmount.value))
-const ivaAmount = computed(() => Math.round(baseImponible.value * 0.15 * 100) / 100)
+// Calculate IVA per item (supports mixed rates)
+const subtotal0 = computed(() => items.value.filter(i => getItemIva(i) === 0).reduce((s, i) => s + Number(i.subtotal || 0), 0))
+const subtotalIva = computed(() => items.value.filter(i => getItemIva(i) > 0).reduce((s, i) => s + Number(i.subtotal || 0), 0))
+const hasMixedIva = computed(() => subtotal0.value > 0 && subtotalIva.value > 0)
+const ivaAmount = computed(() => {
+  return items.value.reduce((sum, i) => {
+    const rate = getItemIva(i)
+    return sum + Math.round(Number(i.subtotal || 0) * rate / 100 * 100) / 100
+  }, 0)
+})
 const total = computed(() => Math.round((baseImponible.value + ivaAmount.value) * 100) / 100)
 const totalWithTip = computed(() => total.value + Number(tip.value.amount || 0))
 
@@ -170,10 +183,10 @@ const submit = async () => {
     const { data } = await axios.post(`${base}/ventas`, {
       appointment_id: props.appointmentId || null,
       client_id: effectiveClientId.value || null,
-      items: items.value.map(i => ({
-        ...i,
-        iva_amount: Math.round(Number(i.subtotal) * 0.15 * 100) / 100,
-      })),
+      items: items.value.map(i => {
+        const rate = getItemIva(i)
+        return { ...i, iva_rate: rate, iva_amount: Math.round(Number(i.subtotal) * rate / 100 * 100) / 100 }
+      }),
       subtotal: subtotal.value,
       discount_amount: discountAmount.value,
       discount_type: discount.value.enabled ? discount.value.type : null,
@@ -393,8 +406,11 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
                 <CardContent class="space-y-2 text-sm">
                   <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span>${{ subtotal.toFixed(2) }}</span></div>
                   <div v-if="discountAmount > 0" class="flex justify-between text-red-500"><span>Descuento</span><span>-${{ discountAmount.toFixed(2) }}</span></div>
-                  <div class="flex justify-between"><span class="text-gray-500">Base IVA 15%</span><span>${{ baseImponible.toFixed(2) }}</span></div>
-                  <div class="flex justify-between"><span class="text-gray-500">IVA 15%</span><span>${{ ivaAmount.toFixed(2) }}</span></div>
+                  <template v-if="hasMixedIva">
+                    <div class="flex justify-between"><span class="text-gray-500">Base IVA {{ globalIva }}%</span><span>${{ subtotalIva.toFixed(2) }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Base IVA 0%</span><span>${{ subtotal0.toFixed(2) }}</span></div>
+                  </template>
+                  <div class="flex justify-between"><span class="text-gray-500">IVA {{ globalIva }}%</span><span>${{ ivaAmount.toFixed(2) }}</span></div>
                   <div class="flex justify-between text-lg font-bold border-t pt-2"><span>Total</span><span>${{ total.toFixed(2) }}</span></div>
                   <div v-if="Number(tip.amount) > 0" class="flex justify-between text-gray-500"><span>Propina</span><span>+${{ Number(tip.amount).toFixed(2) }}</span></div>
 

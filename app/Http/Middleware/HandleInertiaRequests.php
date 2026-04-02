@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
                 'bg' => tenant()->settings['bg_color'] ?? '#F7F5F2',
                 'text' => tenant()->settings['text_color'] ?? '#2D3330',
             ] : null,
+            'tenantIva' => tenant() ? tenantIva() : 15,
             'branches' => $branches,
             'currentBranchId' => $currentBranchId,
             'flash' => [
