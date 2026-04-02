@@ -140,13 +140,13 @@
   }
   .sidebar-active svg { color: var(--color-primary); }
   .sidebar-inactive {
-    color: #555555;
+    color: #1A2420;
     border-left-color: transparent;
-    font-weight: 500;
+    font-weight: 600;
   }
-  .sidebar-inactive svg { color: #AAAAAA; }
-  .sidebar-inactive:hover { background-color: #F4F7F5; color: #333333; }
-  .sidebar-inactive:hover svg { color: #777777; }
+  .sidebar-inactive svg { color: #666666; }
+  .sidebar-inactive:hover { background-color: #F4F7F5; color: #000000; }
+  .sidebar-inactive:hover svg { color: #444444; }
 
   /* KPI cards */
   .kpi-card-primary { background-color: var(--color-primary); color: #ffffff; }
