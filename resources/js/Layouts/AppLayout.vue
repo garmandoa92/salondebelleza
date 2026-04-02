@@ -62,7 +62,7 @@ function luminance(hex) {
 
 const isDarkPrimary = computed(() => {
   const c = themeColors.value?.primary || '#4A7C6F'
-  return luminance(c) < 0.35
+  return luminance(c) < 0.2
 })
 
 watchEffect(() => {
