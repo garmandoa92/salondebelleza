@@ -49,6 +49,7 @@ class ReportController extends Controller
             'inventory' => $this->reportService->getInventoryReport($from, $to),
             'forecast' => $this->reportService->getForecast(),
             'period' => ['from' => $from, 'to' => $to, 'selected' => $request->period ?? 'this_month'],
+            'stylistsList' => \App\Models\Stylist::where('is_active', true)->get(['id', 'name']),
         ]);
     }
 

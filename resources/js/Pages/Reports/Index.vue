@@ -18,6 +18,7 @@ const props = defineProps({
   inventory: Object,
   forecast: Array,
   period: Object,
+  stylistsList: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -53,6 +54,27 @@ const heatColor = (val) => {
 
 const initials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 const stylistTab = ref('revenue')
+
+// Export section
+const today = new Date().toISOString().slice(0, 10)
+const monthStart = today.slice(0, 8) + '01'
+const exportFilters = ref({
+  profit: { date_from: monthStart, date_to: today },
+  sales: { date_from: monthStart, date_to: today, stylist_id: '' },
+  commissions: { date_from: monthStart, date_to: today, stylist_id: '' },
+  clients: { status: 'active' },
+  inventory: { date_from: monthStart, date_to: today },
+  appointments: { date_from: monthStart, date_to: today, stylist_id: '' },
+  cashflow: { date_from: monthStart, date_to: today },
+})
+
+const downloadExport = (type) => {
+  const f = exportFilters.value[type]
+  const params = new URLSearchParams(Object.entries(f).filter(([_, v]) => v)).toString()
+  window.open(`${base}/exports/${type}?${params}`, '_blank')
+}
+
+const stylistsDropdown = computed(() => props.stylistsList || [])
 </script>
 
 <template>
@@ -335,5 +357,130 @@ const stylistTab = ref('revenue')
         <p class="text-xs text-gray-400 mt-3">{{ inventory?.no_movement_count || 0 }} productos sin movimiento en el periodo</p>
       </CardContent>
     </Card>
+
+    <!-- Export section -->
+    <div class="border-t pt-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Exportar datos</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <!-- Profit -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Ganancias del mes</p>
+              <p class="text-xs text-gray-500">P&L completo — para tu contador</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.profit.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.profit.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <Button size="sm" class="w-full" @click="downloadExport('profit')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Sales -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Ventas detalladas</p>
+              <p class="text-xs text-gray-500">Metodos de pago y facturas SRI</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.sales.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.sales.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <select v-model="exportFilters.sales.stylist_id" class="text-xs border rounded px-2 py-1.5 w-full">
+              <option value="">Todas las estilistas</option>
+              <option v-for="s in stylistsDropdown" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+            <Button size="sm" class="w-full" @click="downloadExport('sales')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Commissions -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Comisiones</p>
+              <p class="text-xs text-gray-500">Liquidacion por estilista</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.commissions.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.commissions.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <select v-model="exportFilters.commissions.stylist_id" class="text-xs border rounded px-2 py-1.5 w-full">
+              <option value="">Todas las estilistas</option>
+              <option v-for="s in stylistsDropdown" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+            <Button size="sm" class="w-full" @click="downloadExport('commissions')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Clients -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Base de clientes</p>
+              <p class="text-xs text-gray-500">Backup completo de clientes</p>
+            </div>
+            <select v-model="exportFilters.clients.status" class="text-xs border rounded px-2 py-1.5 w-full">
+              <option value="active">Solo activos</option>
+              <option value="all">Todos</option>
+            </select>
+            <Button size="sm" class="w-full" @click="downloadExport('clients')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Inventory -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Inventario</p>
+              <p class="text-xs text-gray-500">Stock actual y movimientos</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.inventory.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.inventory.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <Button size="sm" class="w-full" @click="downloadExport('inventory')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Appointments -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Citas</p>
+              <p class="text-xs text-gray-500">Historial con metricas</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.appointments.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.appointments.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <select v-model="exportFilters.appointments.stylist_id" class="text-xs border rounded px-2 py-1.5 w-full">
+              <option value="">Todas las estilistas</option>
+              <option v-for="s in stylistsDropdown" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+            <Button size="sm" class="w-full" @click="downloadExport('appointments')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+        <!-- Cash Flow -->
+        <Card>
+          <CardContent class="pt-4 space-y-3">
+            <div>
+              <p class="font-semibold text-sm">Flujo de caja</p>
+              <p class="text-xs text-gray-500">Entradas y salidas del periodo</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="date" v-model="exportFilters.cashflow.date_from" class="text-xs border rounded px-2 py-1.5" />
+              <input type="date" v-model="exportFilters.cashflow.date_to" class="text-xs border rounded px-2 py-1.5" />
+            </div>
+            <Button size="sm" class="w-full" @click="downloadExport('cashflow')">Descargar Excel</Button>
+          </CardContent>
+        </Card>
+
+      </div>
+    </div>
   </div>
 </template>

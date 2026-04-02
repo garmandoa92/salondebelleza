@@ -25,6 +25,9 @@ use App\Http\Controllers\Tenant\SettingsController;
 use App\Http\Controllers\Tenant\ReportController;
 use App\Http\Controllers\Tenant\BranchController;
 use App\Http\Controllers\Tenant\PackageController;
+use App\Http\Controllers\Tenant\PrintController;
+use App\Http\Controllers\Tenant\AdvanceController;
+use App\Http\Controllers\Tenant\ExportController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -182,6 +185,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::put('settings/schedule', [SettingsController::class, 'updateSchedule'])->name('tenant.settings.schedule');
         Route::put('settings/booking', [SettingsController::class, 'updateBooking'])->name('tenant.settings.booking');
         Route::put('settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('tenant.settings.whatsapp');
+        Route::put('settings/printer', [SettingsController::class, 'updatePrinter'])->name('tenant.settings.printer');
         Route::put('settings/payments', [SettingsController::class, 'updatePayments'])->name('tenant.settings.payments');
         Route::post('settings/invite', [SettingsController::class, 'inviteUser'])->name('tenant.settings.invite');
         Route::patch('settings/users/{user}/toggle', [SettingsController::class, 'toggleUser'])->name('tenant.settings.toggle-user');
@@ -225,5 +229,28 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('packages/for-appointment', [PackageController::class, 'forAppointment'])->name('tenant.packages.for-appointment');
         Route::post('packages/use-session', [PackageController::class, 'useSession'])->name('tenant.packages.use-session');
         Route::get('packages/client/{clientId}', [PackageController::class, 'clientPackages'])->name('tenant.packages.client');
+
+        // Exports / Excel
+        Route::get('exports/sales', [ExportController::class, 'sales'])->name('tenant.exports.sales');
+        Route::get('exports/profit', [ExportController::class, 'profit'])->name('tenant.exports.profit');
+        Route::get('exports/appointments', [ExportController::class, 'appointments'])->name('tenant.exports.appointments');
+        Route::get('exports/clients', [ExportController::class, 'clients'])->name('tenant.exports.clients');
+        Route::get('exports/commissions', [ExportController::class, 'commissions'])->name('tenant.exports.commissions');
+        Route::get('exports/inventory', [ExportController::class, 'inventory'])->name('tenant.exports.inventory');
+        Route::get('exports/cashflow', [ExportController::class, 'cashflow'])->name('tenant.exports.cashflow');
+
+        // Advances / Anticipos
+        Route::get('advances', [AdvanceController::class, 'index'])->name('tenant.advances.index');
+        Route::post('advances', [AdvanceController::class, 'store'])->name('tenant.advances.store');
+        Route::get('advances/client/{clientId}', [AdvanceController::class, 'clientAdvances'])->name('tenant.advances.client');
+        Route::post('advances/{advance}/apply', [AdvanceController::class, 'apply'])->name('tenant.advances.apply');
+        Route::post('advances/{advance}/refund', [AdvanceController::class, 'refund'])->name('tenant.advances.refund');
+
+        // Print / Tickets
+        Route::get('print/sale/{sale}', [PrintController::class, 'sale'])->name('tenant.print.sale');
+        Route::get('print/appointment/{appointment}', [PrintController::class, 'appointment'])->name('tenant.print.appointment');
+        Route::get('print/closing/{date}', [PrintController::class, 'closing'])->name('tenant.print.closing');
+        Route::get('print/invoice/{invoice}', [PrintController::class, 'invoice'])->name('tenant.print.invoice');
+        Route::get('print/commission/{stylist}', [PrintController::class, 'commission'])->name('tenant.print.commission');
     });
 });

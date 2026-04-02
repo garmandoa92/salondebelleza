@@ -154,6 +154,9 @@ resources/js/
 | 14 | docs/sesion-14-landing-page.md | PENDING | Landing page del SaaS | Post MVP |
 | 15 | docs/sesion-15-onboarding.md | PENDING | Onboarding guiado | Post MVP |
 | 16 | docs/sesion-16-paquetes.md | DONE | Paquetes y Bonos | Post MVP |
+| 17a | docs/sesion-17a-impresion.md | DONE | Impresión térmica de tickets | Post MVP |
+| 17b | docs/sesion-17b-anticipos.md | DONE | Anticipos y abonos | Post MVP |
+| 17c | docs/sesion-17c-reportes-excel.md | DONE | Reportes Excel completos | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
 
 ## Modulos implementados
@@ -174,6 +177,9 @@ resources/js/
 - **Reportes**: 8 secciones (KPIs, ingresos, servicios, heatmap demanda, estilistas, retencion, forecast, inventario)
 - **Multi-sucursal**: branches CRUD, branch_stylist pivot, branch_id en appointments/sales, plan validation
 - **Paquetes y Bonos**: Package (sessions/combo), ClientPackage, venta en checkout, descuento al completar cita
+- **Impresion Termica**: PrintService genera HTML para 80mm/58mm, tickets de venta/cita/cierre de caja/comisiones, botones en checkout/drawer/ventas
+- **Anticipos y Abonos**: ClientAdvance model, registro desde agenda/ficha cliente, aplicacion automatica en checkout, saldo a favor, panel dashboard
+- **Reportes Excel**: maatwebsite/excel, 7 exports (ventas, P&L, citas, clientes, comisiones, inventario, flujo caja) con hojas multiples y estilos
 
 <!-- MEMORY:START -->
 # salondebelleza
