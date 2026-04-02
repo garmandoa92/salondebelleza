@@ -256,7 +256,13 @@ onMounted(() => {
 
         <!-- 1. CLIENT -->
         <div class="bg-white rounded-xl shadow-sm border p-5">
-          <p class="text-sm font-semibold text-gray-700 mb-3">Cliente</p>
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-sm font-semibold text-gray-700">Cliente</p>
+            <div v-if="!selectedClientName || selectedClientName === 'Sin cliente'" class="flex gap-1.5">
+              <button @click="skipClient" class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">Sin cliente</button>
+              <button @click="showNewClient = !showNewClient" class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">{{ showNewClient ? 'Cancelar' : '+ Nuevo' }}</button>
+            </div>
+          </div>
 
           <div v-if="selectedClientName && selectedClientName !== 'Sin cliente'" class="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
             <Avatar class="h-10 w-10 ring-2 ring-gray-200"><AvatarFallback class="text-sm">{{ initials(selectedClientName) }}</AvatarFallback></Avatar>
@@ -280,10 +286,6 @@ onMounted(() => {
                 <Avatar class="h-8 w-8"><AvatarFallback class="text-xs">{{ initials(c.first_name + ' ' + c.last_name) }}</AvatarFallback></Avatar>
                 <div class="text-left"><p class="text-sm font-medium">{{ c.first_name }} {{ c.last_name }}</p><p class="text-xs text-gray-500">{{ c.phone }}</p></div>
               </button>
-            </div>
-            <div class="flex gap-2 mt-3">
-              <button @click="skipClient" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">Sin cliente</button>
-              <button @click="showNewClient = !showNewClient" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">{{ showNewClient ? 'Cancelar' : '+ Nuevo cliente' }}</button>
             </div>
             <div v-if="showNewClient" class="border rounded-lg p-4 space-y-2 bg-gray-50 mt-3">
               <div class="grid grid-cols-2 gap-2"><Input v-model="newClient.first_name" placeholder="Nombre" /><Input v-model="newClient.last_name" placeholder="Apellido" /></div>
