@@ -309,7 +309,51 @@ onMounted(() => {
           </label>
         </div>
 
-        <!-- 2. ITEMS -->
+        <!-- 2. INVOICE -->
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="p-5">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <div :class="['relative w-11 h-6 rounded-full transition-colors', invoiceRequired ? 'bg-primary' : 'bg-gray-200']" @click="invoiceRequired = !invoiceRequired">
+                <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', invoiceRequired ? 'translate-x-[22px]' : 'translate-x-0.5']"></div>
+              </div>
+              <span class="text-sm font-semibold text-gray-700">Comprobante electronico</span>
+            </label>
+          </div>
+          <div v-if="invoiceRequired" class="border-t px-5 pb-5 pt-4 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-500 mb-1 block">Tipo identificacion</label>
+                <select v-model="invoiceData.buyer_identification_type" class="w-full text-sm border rounded-lg px-3 py-2 bg-gray-50">
+                  <option value="final_consumer">Consumidor final</option>
+                  <option value="cedula">Cedula (05)</option>
+                  <option value="RUC">RUC (04)</option>
+                  <option value="passport">Pasaporte (06)</option>
+                </select>
+              </div>
+              <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
+                <label class="text-xs text-gray-500 mb-1 block">{{ invoiceData.buyer_identification_type === 'RUC' ? 'RUC' : invoiceData.buyer_identification_type === 'cedula' ? 'Cedula' : 'Pasaporte' }}</label>
+                <div class="relative">
+                  <Input v-model="invoiceData.buyer_identification" :maxlength="invoiceData.buyer_identification_type === 'RUC' ? 13 : invoiceData.buyer_identification_type === 'cedula' ? 10 : 20"
+                    :class="[invoiceIdValid === true ? 'border-green-400 ring-1 ring-green-200' : invoiceIdValid === false ? 'border-red-400 ring-1 ring-red-200' : '']" />
+                  <div v-if="invoiceIdValid === true" class="absolute right-2.5 top-1/2 -translate-y-1/2"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                  <div v-else-if="invoiceIdValid === false" class="absolute right-2.5 top-1/2 -translate-y-1/2"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>
+                </div>
+                <p v-if="invoiceIdValid === false" class="text-[11px] text-red-500 mt-1">Numero invalido</p>
+                <p v-if="invoiceClientFound" class="text-[11px] text-green-600 mt-1">Cliente: {{ invoiceClientFound }}</p>
+              </div>
+            </div>
+            <template v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
+              <div><label class="text-xs text-gray-500 mb-1 block">{{ invoiceData.buyer_identification_type === 'RUC' ? 'Razon social' : 'Nombre completo' }}</label><Input v-model="invoiceData.buyer_name" /></div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-xs text-gray-500 mb-1 block">Email</label><Input v-model="invoiceData.buyer_email" type="email" placeholder="correo@ejemplo.com" /></div>
+                <div><label class="text-xs text-gray-500 mb-1 block">Telefono</label><Input v-model="invoiceData.buyer_phone" placeholder="09..." /></div>
+              </div>
+              <div><label class="text-xs text-gray-500 mb-1 block">Direccion {{ invoiceData.buyer_identification_type === 'RUC' ? '' : '(opcional)' }}</label><Input v-model="invoiceData.buyer_address" /></div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 3. ITEMS -->
         <div class="bg-white rounded-xl shadow-sm border">
           <div class="px-5 pt-5 pb-3 border-b flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-900">Servicios y productos</h3>
@@ -374,50 +418,6 @@ onMounted(() => {
               <Input v-model="discount.amount" type="number" min="0" step="0.01" placeholder="0" />
               <Input v-model="discount.reason" placeholder="Motivo" />
             </div>
-          </div>
-        </div>
-
-        <!-- 4. INVOICE -->
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div class="p-5">
-            <label class="flex items-center gap-3 cursor-pointer">
-              <div :class="['relative w-11 h-6 rounded-full transition-colors', invoiceRequired ? 'bg-primary' : 'bg-gray-200']" @click="invoiceRequired = !invoiceRequired">
-                <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', invoiceRequired ? 'translate-x-[22px]' : 'translate-x-0.5']"></div>
-              </div>
-              <span class="text-sm font-semibold text-gray-700">Comprobante electronico</span>
-            </label>
-          </div>
-          <div v-if="invoiceRequired" class="border-t px-5 pb-5 pt-4 space-y-4">
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-xs text-gray-500 mb-1 block">Tipo identificacion</label>
-                <select v-model="invoiceData.buyer_identification_type" class="w-full text-sm border rounded-lg px-3 py-2 bg-gray-50">
-                  <option value="final_consumer">Consumidor final</option>
-                  <option value="cedula">Cedula (05)</option>
-                  <option value="RUC">RUC (04)</option>
-                  <option value="passport">Pasaporte (06)</option>
-                </select>
-              </div>
-              <div v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
-                <label class="text-xs text-gray-500 mb-1 block">{{ invoiceData.buyer_identification_type === 'RUC' ? 'RUC' : invoiceData.buyer_identification_type === 'cedula' ? 'Cedula' : 'Pasaporte' }}</label>
-                <div class="relative">
-                  <Input v-model="invoiceData.buyer_identification" :maxlength="invoiceData.buyer_identification_type === 'RUC' ? 13 : invoiceData.buyer_identification_type === 'cedula' ? 10 : 20"
-                    :class="[invoiceIdValid === true ? 'border-green-400 ring-1 ring-green-200' : invoiceIdValid === false ? 'border-red-400 ring-1 ring-red-200' : '']" />
-                  <div v-if="invoiceIdValid === true" class="absolute right-2.5 top-1/2 -translate-y-1/2"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
-                  <div v-else-if="invoiceIdValid === false" class="absolute right-2.5 top-1/2 -translate-y-1/2"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>
-                </div>
-                <p v-if="invoiceIdValid === false" class="text-[11px] text-red-500 mt-1">Numero invalido</p>
-                <p v-if="invoiceClientFound" class="text-[11px] text-green-600 mt-1">Cliente: {{ invoiceClientFound }}</p>
-              </div>
-            </div>
-            <template v-if="invoiceData.buyer_identification_type !== 'final_consumer'">
-              <div><label class="text-xs text-gray-500 mb-1 block">{{ invoiceData.buyer_identification_type === 'RUC' ? 'Razon social' : 'Nombre completo' }}</label><Input v-model="invoiceData.buyer_name" /></div>
-              <div class="grid grid-cols-2 gap-3">
-                <div><label class="text-xs text-gray-500 mb-1 block">Email</label><Input v-model="invoiceData.buyer_email" type="email" placeholder="correo@ejemplo.com" /></div>
-                <div><label class="text-xs text-gray-500 mb-1 block">Telefono</label><Input v-model="invoiceData.buyer_phone" placeholder="09..." /></div>
-              </div>
-              <div><label class="text-xs text-gray-500 mb-1 block">Direccion {{ invoiceData.buyer_identification_type === 'RUC' ? '' : '(opcional)' }}</label><Input v-model="invoiceData.buyer_address" /></div>
-            </template>
           </div>
         </div>
 
