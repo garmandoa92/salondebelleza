@@ -57,6 +57,10 @@ const retryInvoice = async (id) => {
 }
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+
+const printRide = () => window.open(`${base}/print/invoice/${detailInvoice.value.id}`, '_blank', 'width=400,height=600')
+const openRideHtml = () => window.open(`${base}/facturacion/${detailInvoice.value.id}/ride`, '_blank')
+const paymentLabels = { cash: 'Efectivo', transfer: 'Transferencia', card_debit: 'T. Debito', card_credit: 'T. Credito', other: 'Otro' }
 </script>
 
 <template>
@@ -162,44 +166,106 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-EC', { day: '2-
     <!-- Detail drawer -->
     <div v-if="showDetail && detailInvoice" class="fixed inset-0 z-50 flex justify-end">
       <div class="absolute inset-0 bg-black/30" @click="showDetail = false" />
-      <div class="relative w-full max-w-md bg-white shadow-xl overflow-y-auto p-5 space-y-4">
-        <div class="flex items-center justify-between">
+      <div class="relative w-full max-w-lg bg-white shadow-xl overflow-y-auto p-5 space-y-4">
+        <!-- Header -->
+        <div class="flex items-start justify-between">
           <div>
-            <h2 class="font-semibold">{{ detailInvoice.establishment }}-{{ detailInvoice.emission_point }}-{{ detailInvoice.sequential }}</h2>
-            <span :class="['text-xs px-2 py-0.5 rounded-full', statusColors[detailInvoice.sri_status?.value || detailInvoice.sri_status]]">
+            <h2 class="font-semibold text-lg">{{ detailInvoice.establishment }}-{{ detailInvoice.emission_point }}-{{ detailInvoice.sequential }}</h2>
+            <Badge :class="statusColors[detailInvoice.sri_status?.value || detailInvoice.sri_status]" class="text-xs mt-1">
               {{ statusLabels[detailInvoice.sri_status?.value || detailInvoice.sri_status] }}
-            </span>
+            </Badge>
           </div>
-          <button @click="showDetail = false" class="text-gray-400 text-xl">&times;</button>
+          <button @click="showDetail = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
         </div>
 
+        <!-- SRI info -->
         <div class="text-sm space-y-2">
           <div class="flex justify-between"><span class="text-gray-500">Fecha emision</span><span>{{ formatDate(detailInvoice.issue_date) }}</span></div>
-          <div v-if="detailInvoice.sri_authorization_number" class="text-xs">
-            <p class="text-gray-500">N° Autorizacion</p>
-            <p class="font-mono break-all">{{ detailInvoice.sri_authorization_number }}</p>
+          <div v-if="detailInvoice.sri_authorization_number">
+            <p class="text-xs text-gray-500">N° Autorizacion</p>
+            <p class="text-xs font-mono break-all">{{ detailInvoice.sri_authorization_number }}</p>
           </div>
-          <div class="text-xs">
-            <p class="text-gray-500">Clave de acceso</p>
-            <p class="font-mono break-all">{{ detailInvoice.access_key }}</p>
+          <div>
+            <p class="text-xs text-gray-500">Clave de acceso</p>
+            <p class="text-xs font-mono break-all">{{ detailInvoice.access_key }}</p>
           </div>
         </div>
 
+        <!-- Buyer -->
         <div class="border-t pt-3 text-sm space-y-1">
           <p><span class="text-gray-500">Comprador:</span> {{ detailInvoice.buyer_name || 'CONSUMIDOR FINAL' }}</p>
           <p><span class="text-gray-500">Identificacion:</span> {{ detailInvoice.buyer_identification || '9999999999999' }}</p>
+          <p v-if="detailInvoice.buyer_email"><span class="text-gray-500">Email:</span> {{ detailInvoice.buyer_email }}</p>
         </div>
 
+        <!-- Sale details -->
+        <div v-if="detailInvoice.sale" class="border-t pt-3">
+          <h3 class="text-sm font-medium text-gray-500 mb-2">Detalle de venta</h3>
+
+          <!-- Client -->
+          <div v-if="detailInvoice.sale.client" class="flex items-center gap-2 bg-gray-50 rounded-lg p-2 mb-3 text-sm">
+            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium">
+              {{ (detailInvoice.sale.client.first_name?.[0] || '') + (detailInvoice.sale.client.last_name?.[0] || '') }}
+            </div>
+            <div>
+              <p class="font-medium">{{ detailInvoice.sale.client.first_name }} {{ detailInvoice.sale.client.last_name }}</p>
+              <p v-if="detailInvoice.sale.client.phone" class="text-xs text-gray-500">{{ detailInvoice.sale.client.phone }}</p>
+            </div>
+          </div>
+
+          <!-- Appointment info -->
+          <div v-if="detailInvoice.sale.appointment" class="bg-blue-50 rounded-lg p-2 mb-3 text-sm">
+            <p class="text-blue-700 font-medium">Cita: {{ detailInvoice.sale.appointment.service?.name }}</p>
+            <p class="text-xs text-blue-600">Estilista: {{ detailInvoice.sale.appointment.stylist?.name }}</p>
+          </div>
+
+          <!-- Items -->
+          <table class="w-full text-sm">
+            <thead><tr class="border-b text-xs text-gray-400"><th class="text-left pb-1">Item</th><th class="w-10 pb-1 text-center">Cant</th><th class="w-16 pb-1 text-right">Subtotal</th></tr></thead>
+            <tbody>
+              <tr v-for="item in detailInvoice.sale.items" :key="item.id" class="border-b last:border-0">
+                <td class="py-1.5">
+                  <p class="font-medium">{{ item.name }}</p>
+                  <p v-if="item.stylist" class="text-xs text-gray-400">{{ item.stylist.name }}</p>
+                </td>
+                <td class="py-1.5 text-center text-gray-600">{{ item.quantity }}</td>
+                <td class="py-1.5 text-right font-medium">${{ Number(item.subtotal).toFixed(2) }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Payment methods -->
+          <div v-if="detailInvoice.sale.payment_methods?.length" class="mt-3">
+            <p class="text-xs text-gray-500 mb-1">Forma de pago</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="(p, i) in detailInvoice.sale.payment_methods" :key="i" class="text-xs bg-gray-100 rounded px-2 py-1">
+                {{ paymentLabels[p.method] || p.method }} ${{ Number(p.amount).toFixed(2) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals -->
         <div class="border-t pt-3 text-sm">
           <div v-if="Number(detailInvoice.subtotal_0) > 0" class="flex justify-between"><span class="text-gray-500">Subtotal IVA 0%</span><span>${{ Number(detailInvoice.subtotal_0).toFixed(2) }}</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">Subtotal IVA {{ detailInvoice.iva_rate || 15 }}%</span><span>${{ Number(detailInvoice.subtotal_iva).toFixed(2) }}</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">IVA {{ detailInvoice.iva_rate || 15 }}%</span><span>${{ Number(detailInvoice.iva_amount).toFixed(2) }}</span></div>
+          <div v-if="Number(detailInvoice.subtotal_iva) > 0" class="flex justify-between"><span class="text-gray-500">Subtotal IVA {{ detailInvoice.iva_rate ?? 15 }}%</span><span>${{ Number(detailInvoice.subtotal_iva).toFixed(2) }}</span></div>
+          <div v-if="Number(detailInvoice.iva_amount) > 0" class="flex justify-between"><span class="text-gray-500">IVA {{ detailInvoice.iva_rate ?? 15 }}%</span><span>${{ Number(detailInvoice.iva_amount).toFixed(2) }}</span></div>
           <div class="flex justify-between font-bold text-base border-t pt-1 mt-1"><span>Total</span><span>${{ Number(detailInvoice.total).toFixed(2) }}</span></div>
         </div>
 
-        <div v-if="detailInvoice.error_message" class="bg-red-50 rounded p-3 text-sm text-red-700">
+        <!-- Error -->
+        <div v-if="detailInvoice.error_message" class="bg-red-50 rounded-lg p-3 text-sm text-red-700">
           <p class="font-medium">Error SRI</p>
           <p>{{ detailInvoice.error_message }}</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="border-t pt-3 space-y-2">
+          <Button variant="outline" class="w-full" @click="printRide">Imprimir RIDE termico</Button>
+          <Button variant="outline" class="w-full" @click="openRideHtml">Ver RIDE completo</Button>
+          <Button v-if="(detailInvoice.sri_status?.value || detailInvoice.sri_status) === 'rejected'" class="w-full bg-amber-600 hover:bg-amber-700 text-white" @click="retryInvoice(detailInvoice.id); showDetail = false">
+            Reintentar envio al SRI
+          </Button>
         </div>
       </div>
     </div>

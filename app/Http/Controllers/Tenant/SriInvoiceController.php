@@ -55,7 +55,7 @@ class SriInvoiceController extends Controller
 
     public function show(SriInvoice $invoice)
     {
-        $invoice->load('sale.items');
+        $invoice->load(['sale.items.stylist:id,name', 'sale.client:id,first_name,last_name,phone', 'sale.appointment.service:id,name', 'sale.appointment.stylist:id,name']);
         return response()->json($invoice);
     }
 
