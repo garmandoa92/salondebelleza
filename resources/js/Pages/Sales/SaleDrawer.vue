@@ -40,6 +40,7 @@ const whatsappUrl = (phone) => `https://wa.me/593${phone?.replace(/^0/, '').repl
 
 const printReceipt = () => window.open(`${base}/print/sale/${sale.value.id}`, '_blank', 'width=400,height=600')
 const printRide = () => window.open(`${base}/print/invoice/${sale.value.sri_invoice?.id}`, '_blank', 'width=400,height=600')
+const openWhatsapp = () => window.open(whatsappUrl(sale.value.client?.phone), '_blank')
 </script>
 
 <template>
@@ -154,7 +155,7 @@ const printRide = () => window.open(`${base}/print/invoice/${sale.value.sri_invo
             <Button variant="outline" class="w-full" @click="printReceipt">
               Reimprimir recibo
             </Button>
-            <Button v-if="sale.client?.phone" variant="outline" class="w-full text-green-600 border-green-300" @click="window.open(whatsappUrl(sale.client.phone), '_blank')">
+            <Button v-if="sale.client?.phone" variant="outline" class="w-full text-green-600 border-green-300" @click="openWhatsapp">
               Enviar por WhatsApp
             </Button>
           </div>
