@@ -103,6 +103,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('agenda/events', [AppointmentController::class, 'events'])->name('tenant.agenda.events');
         Route::get('agenda/occupancy', [AppointmentController::class, 'occupancy'])->name('tenant.agenda.occupancy');
         Route::get('agenda/availability', [AppointmentController::class, 'availability'])->name('tenant.agenda.availability');
+        Route::get('agenda/pending-payments', [AppointmentController::class, 'pendingPayments'])->name('tenant.agenda.pending-payments');
         Route::get('agenda/search-clients', [AppointmentController::class, 'searchClients'])->name('tenant.agenda.search-clients');
         Route::post('agenda/store-client', [AppointmentController::class, 'storeClient'])->name('tenant.agenda.store-client');
         Route::post('agenda/appointments', [AppointmentController::class, 'store'])->name('tenant.appointments.store');

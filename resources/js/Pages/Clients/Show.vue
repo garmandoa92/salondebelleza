@@ -214,11 +214,12 @@ const daysToBirthday = () => {
         <!-- Tab: Paquetes -->
         <Card v-if="activeTab === 'paquetes'">
           <CardContent class="pt-4 space-y-4">
-            <div v-if="clientPackages.length">
-              <div v-for="cp in clientPackages" :key="cp.id" class="border rounded-lg p-4 space-y-3 mb-3">
+            <div v-if="clientPackages.length" class="space-y-3">
+              <div v-for="cp in clientPackages" :key="cp.id" class="border rounded-lg p-4 space-y-3">
                 <div class="flex items-start justify-between">
                   <div>
                     <h4 class="font-semibold">{{ cp.package_name }}</h4>
+                    <p class="text-xs text-gray-400 font-mono">Recibo: {{ cp.receipt_number || '-' }}</p>
                     <p class="text-xs text-gray-500">Comprado: {{ new Date(cp.purchased_at).toLocaleDateString('es-EC') }} · Vence: {{ cp.expires_at ? new Date(cp.expires_at).toLocaleDateString('es-EC') : 'Sin vencimiento' }}</p>
                   </div>
                   <Badge :class="cp.status === 'active' ? 'bg-green-100 text-green-700' : cp.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'" class="text-xs">
@@ -232,15 +233,23 @@ const daysToBirthday = () => {
                     <span class="text-gray-500">{{ item.used_quantity }}/{{ item.total_quantity }} usadas</span>
                   </div>
                   <div class="w-full h-2 bg-gray-100 rounded-full">
-                    <div
-                      class="h-2 rounded-full transition-all"
-                      :class="item.used_quantity >= item.total_quantity ? 'bg-blue-500' : 'bg-green-500'"
-                      :style="{ width: `${Math.min(100, (item.used_quantity / item.total_quantity) * 100)}%` }"
-                    />
+                    <div class="h-2 rounded-full transition-all" :class="item.used_quantity >= item.total_quantity ? 'bg-blue-500' : 'bg-green-500'"
+                      :style="{ width: `${Math.min(100, (item.used_quantity / item.total_quantity) * 100)}%` }" />
                   </div>
                   <p class="text-xs text-gray-400">
-                    {{ item.total_quantity - item.used_quantity > 0 ? `Quedan ${item.total_quantity - item.used_quantity} sesiones` : 'Todas las sesiones usadas' }}
+                    {{ item.total_quantity - item.used_quantity > 0 ? `Quedan ${item.total_quantity - item.used_quantity} sesiones` : 'Todas usadas' }}
                   </p>
+                </div>
+
+                <!-- Usage log -->
+                <div v-if="cp.usage_logs?.length" class="border-t pt-2">
+                  <p class="text-xs text-gray-500 mb-1">Historial de uso</p>
+                  <div class="space-y-0.5 max-h-32 overflow-y-auto">
+                    <div v-for="(log, i) in cp.usage_logs" :key="i" class="text-xs text-gray-500 flex justify-between">
+                      <span>{{ log.date }} · {{ log.used_by }} · {{ log.sessions_used }} sesion</span>
+                      <span>{{ log.sessions_after }}/{{ log.total }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

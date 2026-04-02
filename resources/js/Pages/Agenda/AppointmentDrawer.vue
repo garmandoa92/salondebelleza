@@ -73,13 +73,8 @@ const completingPackage = ref(false)
 const completePackageSession = async () => {
   completingPackage.value = true
   try {
-    // Complete the appointment
-    await axios.post(`${base}/agenda/appointments/${apt.value.id}/complete`)
-    // Use the package session
-    await axios.post(`${base}/packages/use-session`, {
-      client_package_item_id: apt.value.client_package_item_id,
-      appointment_id: apt.value.id,
-    })
+    // Complete: marks appointment completed + auto-deducts package session if linked
+    await axios.post(`${base}/agenda/appointments/${apt.value.id}/complete`, {}, { headers: { Accept: 'application/json' } })
     const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}`)
     apt.value = data
     emit('updated')
@@ -102,6 +97,7 @@ const formatTime = (d) => new Date(d).toLocaleTimeString('es-EC', { hour: '2-dig
 const initials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
 
 const status = computed(() => apt.value?.status?.value || apt.value?.status || 'pending')
+const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.value?.payment_status || 'pending')
 </script>
 
 <template>
@@ -199,17 +195,25 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
             <template v-else-if="status === 'in_progress'">
               <div v-if="isPackageSession" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm mb-2">
                 <p class="font-medium text-green-800">Sesion de paquete — ya pagada</p>
-                <p class="text-green-600 text-xs">Al completar se descuenta 1 sesion automaticamente</p>
+                <p class="text-green-600 text-xs">Al completar se descuenta automaticamente</p>
               </div>
-              <Button v-if="isPackageSession" class="w-full bg-green-600 hover:bg-green-700" :disabled="completingPackage" @click="completePackageSession">
-                {{ completingPackage ? 'Completando...' : 'Completar sesion de paquete' }}
-              </Button>
-              <Button v-else class="w-full bg-green-600 hover:bg-green-700" @click="openCheckout">Completar y cobrar →</Button>
+              <div class="flex gap-2">
+                <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="completingPackage" @click="completePackageSession">
+                  {{ completingPackage ? 'Completando...' : 'Completar servicio' }}
+                </Button>
+                <Button v-if="!isPackageSession" class="flex-1" @click="openCheckout">Cobrar</Button>
+              </div>
               <Button variant="outline" class="w-full text-red-600 border-red-300" @click="showCancel = true">Cancelar</Button>
             </template>
 
             <template v-else-if="status === 'completed'">
-              <p class="text-sm text-center text-gray-400">Servicio completado</p>
+              <div v-if="paymentStatus === 'pending'" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm mb-2">
+                <p class="font-medium text-amber-800">Pendiente de cobro</p>
+              </div>
+              <Button v-if="paymentStatus === 'pending'" class="w-full" @click="openCheckout">Cobrar</Button>
+              <p v-else-if="paymentStatus === 'package'" class="text-sm text-center text-green-600">Cubierto por paquete</p>
+              <p v-else-if="paymentStatus === 'paid'" class="text-sm text-center text-gray-400">Servicio completado y cobrado</p>
+              <p v-else class="text-sm text-center text-gray-400">Servicio completado</p>
             </template>
 
             <template v-else-if="status === 'cancelled' || status === 'no_show'">

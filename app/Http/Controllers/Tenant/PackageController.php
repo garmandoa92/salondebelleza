@@ -118,27 +118,55 @@ class PackageController extends Controller
         ]);
     }
 
-    // Use a package session (called when completing appointment)
     public function useSession(Request $request)
     {
         $request->validate([
             'client_package_item_id' => ['required', 'uuid'],
             'appointment_id' => ['required', 'uuid'],
+            'sessions_used' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $item = \App\Models\ClientPackageItem::findOrFail($request->client_package_item_id);
-        $this->packageService->useSession($item, $request->appointment_id);
+        $sessions = $request->sessions_used ?? 1;
+        $log = $this->packageService->useSessions($item, $sessions, $request->appointment_id, auth()->id());
+        $cp = $item->clientPackage->fresh();
 
-        return response()->json(['success' => true, 'remaining' => $item->fresh()->remaining]);
+        return response()->json([
+            'success' => true,
+            'receipt_number' => $cp->receipt_number,
+            'package_name' => $cp->package_name,
+            'sessions_before' => $log->sessions_before,
+            'sessions_after' => $log->sessions_after,
+            'remaining' => $item->fresh()->remaining,
+            'package_completed' => $cp->status === 'completed',
+        ]);
     }
 
-    // Client packages for ficha del cliente
     public function clientPackages(string $clientId)
     {
         $packages = ClientPackage::where('client_id', $clientId)
             ->with('items')
             ->orderByDesc('purchased_at')
             ->get();
+
+        // Attach usage logs
+        $packageIds = $packages->pluck('id');
+        $logs = \App\Models\PackageUsageLog::whereIn('client_package_id', $packageIds)
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('client_package_id');
+
+        $packages->each(function ($cp) use ($logs) {
+            $cp->usage_logs = ($logs[$cp->id] ?? collect())->map(fn ($l) => [
+                'date' => $l->created_at->format('d M Y'),
+                'service_name' => $l->item?->service_name ?? '-',
+                'sessions_used' => $l->sessions_used,
+                'sessions_after' => $l->sessions_after,
+                'total' => $l->item?->total_quantity ?? 0,
+                'used_by' => $l->user?->name ?? '-',
+            ]);
+        });
 
         return response()->json($packages);
     }
@@ -155,7 +183,9 @@ class PackageController extends Controller
             ->get()
             ->map(fn ($cp) => [
                 'id' => $cp->id,
+                'receipt_number' => $cp->receipt_number,
                 'package_name' => $cp->package_name,
+                'purchased_at' => $cp->purchased_at?->format('d/m/Y'),
                 'expires_at' => $cp->expires_at?->format('d/m/Y'),
                 'items' => $cp->items->map(fn ($i) => [
                     'id' => $i->id,

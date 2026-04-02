@@ -10,6 +10,7 @@ class ClientPackage extends Model
     use HasUuids;
 
     protected $fillable = [
+        'receipt_number',
         'client_id',
         'package_id',
         'sale_id',

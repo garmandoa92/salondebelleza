@@ -255,6 +255,29 @@ const onCheckout = (data) => {
 const onCheckoutCompleted = () => {
   showCheckout.value = false
   calendarRef.value?.getApi()?.refetchEvents()
+  loadPendingPayments()
+}
+
+// Pending payments
+const pendingPayments = ref([])
+const loadPendingPayments = async () => {
+  try {
+    const { data } = await axios.get(`${base}/agenda/pending-payments`)
+    pendingPayments.value = data
+  } catch {}
+}
+
+const cobrarPendiente = (apt) => {
+  onCheckout({
+    appointmentId: apt.id,
+    clientId: apt.client_id,
+    clientName: apt.client_name,
+    preItems: [{
+      type: 'service', reference_id: apt.service_id, name: apt.service_name,
+      quantity: 1, unit_price: apt.price, subtotal: apt.price,
+      iva_amount: 0, discount_amount: 0, stylist_id: apt.stylist_id,
+    }],
+  })
 }
 
 const openNewAppointment = () => {
@@ -281,6 +304,7 @@ const onKey = (e) => {
 
 onMounted(() => {
   window.addEventListener('keydown', onKey)
+  loadPendingPayments()
   timerInterval.value = setInterval(() => {
     document.querySelectorAll('.event-timer[data-started]').forEach(el => {
       const started = new Date(el.dataset.started)
@@ -354,6 +378,20 @@ onUnmounted(() => {
             <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: s.color }" />
             <span class="truncate">{{ s.name }}</span>
           </label>
+        </div>
+
+        <!-- Pending payments -->
+        <div v-if="pendingPayments.length" class="mt-4 pt-3 border-t">
+          <p class="text-xs font-medium text-amber-600 mb-2">Pendientes de cobro ({{ pendingPayments.length }})</p>
+          <div class="space-y-1.5">
+            <div v-for="p in pendingPayments" :key="p.id" class="text-xs bg-amber-50 rounded p-2">
+              <p class="font-medium truncate">{{ p.client_name }}</p>
+              <p class="text-gray-500">{{ p.service_name }} · {{ p.time }}</p>
+              <button @click="cobrarPendiente(p)" class="text-amber-700 font-medium hover:underline mt-0.5">
+                Cobrar ${{ Number(p.price).toFixed(0) }} →
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -101,7 +101,7 @@ const selectFromPackage = (pkg, item) => {
     svc = { id: item.service_id, name: item.service_name, base_price: 0, duration_minutes: 30 }
   }
   selectedService.value = svc
-  selectedPackageItem.value = { ...item, package_name: pkg.package_name, package_id: pkg.id, expires_at: pkg.expires_at }
+  selectedPackageItem.value = { ...item, package_name: pkg.package_name, package_id: pkg.id, receipt_number: pkg.receipt_number, purchased_at: pkg.purchased_at, expires_at: pkg.expires_at }
   purchasePackageId.value = null
   appointmentMode.value = 'package_use'
 }
@@ -321,6 +321,7 @@ const close = () => { resetForm(); emit('close') }
                     <h4 class="text-sm font-semibold">{{ pkg.package_name }}</h4>
                     <span class="text-xs text-gray-400">Vence: {{ pkg.expires_at }}</span>
                   </div>
+                  <p class="text-[10px] text-gray-400 font-mono">Recibo: {{ pkg.receipt_number }} · Comprado: {{ pkg.purchased_at }}</p>
                   <div v-for="item in pkg.items" :key="item.id" class="space-y-1">
                     <div class="flex items-center justify-between text-xs">
                       <span>{{ item.service_name }}</span>
@@ -415,21 +416,29 @@ const close = () => { resetForm(); emit('close') }
           <div class="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <p><span class="text-gray-500">Cliente:</span> <span class="font-medium">{{ selectedClient?.first_name }} {{ selectedClient?.last_name }}</span></p>
             <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ selectedService?.name }}</span> — {{ selectedService?.duration_minutes }}min</p>
-            <p><span class="text-gray-500">Precio:</span> <span class="font-medium">{{ summaryPrice }}</span></p>
             <p><span class="text-gray-500">Estilista:</span> <span class="font-medium">{{ stylists?.find(s => s.id === selectedStylist)?.name }}</span></p>
             <p><span class="text-gray-500">Fecha:</span> <span class="font-medium">{{ selectedDate }} a las {{ selectedTime }}</span></p>
 
-            <!-- Package info in summary -->
-            <div v-if="appointmentMode === 'package_use' && selectedPackageItem" class="bg-green-50 border border-green-200 rounded p-2 mt-2">
-              <p class="text-green-700 text-xs font-medium">
-                Sesion del paquete "{{ selectedPackageItem.package_name }}"
-                (quedaran {{ selectedPackageItem.remaining - 1 }} sesiones)
-              </p>
+            <!-- Case: Package session -->
+            <div v-if="appointmentMode === 'package_use' && selectedPackageItem" class="bg-green-50 border border-green-200 rounded-lg p-3 mt-3 space-y-1">
+              <p class="text-green-800 font-medium text-xs">Sesion del paquete</p>
+              <p class="text-green-700 text-xs font-mono">Recibo: {{ selectedPackageItem.receipt_number }}</p>
+              <p class="text-green-700 text-xs">{{ selectedPackageItem.package_name }}</p>
+              <p class="text-green-700 text-xs">Quedaran {{ selectedPackageItem.remaining - 1 }} de {{ selectedPackageItem.total }} sesiones</p>
+              <p v-if="selectedPackageItem.expires_at" class="text-green-600 text-[11px]">Vence: {{ selectedPackageItem.expires_at }}</p>
+              <p class="text-green-800 font-bold text-sm mt-1">TOTAL: $0.00 <span class="font-normal text-xs">(incluido en el paquete)</span></p>
             </div>
-            <div v-if="appointmentMode === 'package_buy'" class="bg-purple-50 border border-purple-200 rounded p-2 mt-2">
-              <p class="text-purple-700 text-xs font-medium">
-                Compra de paquete — primera sesion incluida
-              </p>
+
+            <!-- Case: Buy new package -->
+            <div v-else-if="appointmentMode === 'package_buy'" class="bg-purple-50 border border-purple-200 rounded-lg p-3 mt-3 space-y-1">
+              <p class="text-purple-800 font-medium text-xs">PAQUETE NUEVO</p>
+              <p class="text-purple-700 text-xs">Primera sesion incluida hoy</p>
+              <p class="text-purple-800 font-bold text-sm mt-1">TOTAL: {{ summaryPrice }} <span class="font-normal text-xs">(precio del paquete completo)</span></p>
+            </div>
+
+            <!-- Case: Normal service -->
+            <div v-else class="border-t pt-2 mt-2">
+              <p class="font-bold">TOTAL: {{ summaryPrice }}</p>
             </div>
           </div>
 

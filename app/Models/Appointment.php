@@ -20,6 +20,8 @@ class Appointment extends Model
         'service_id',
         'branch_id',
         'client_package_item_id',
+        'payment_status',
+        'sessions_used',
         'starts_at',
         'ends_at',
         'status',

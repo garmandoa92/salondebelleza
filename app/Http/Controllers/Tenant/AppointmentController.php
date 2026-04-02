@@ -155,6 +155,24 @@ class AppointmentController extends Controller
     public function complete(Appointment $appointment)
     {
         $this->appointmentService->complete($appointment);
+
+        // Handle package session
+        if ($appointment->client_package_item_id) {
+            $item = \App\Models\ClientPackageItem::find($appointment->client_package_item_id);
+            if ($item && $item->remaining > 0) {
+                $packageService = app(\App\Services\PackageService::class);
+                $sessions = $appointment->sessions_used ?? 1;
+                $packageService->useSessions($item, $sessions, $appointment->id, auth()->id());
+                $appointment->update(['payment_status' => 'package']);
+            }
+        } else {
+            $appointment->update(['payment_status' => 'pending']);
+        }
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'payment_status' => $appointment->payment_status]);
+        }
+
         return back()->with('success', 'Servicio completado.');
     }
 
@@ -179,6 +197,29 @@ class AppointmentController extends Controller
         );
 
         return response()->json($slots);
+    }
+
+    public function pendingPayments()
+    {
+        $branchId = session('current_branch_id');
+        $appointments = Appointment::where('status', 'completed')
+            ->where('payment_status', 'pending')
+            ->whereDate('starts_at', today())
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->with(['client:id,first_name,last_name', 'service:id,name,base_price', 'stylist:id,name'])
+            ->orderBy('starts_at')
+            ->get();
+
+        return response()->json($appointments->map(fn ($a) => [
+            'id' => $a->id,
+            'client_id' => $a->client_id,
+            'client_name' => $a->client ? "{$a->client->first_name} {$a->client->last_name}" : 'Sin cliente',
+            'service_id' => $a->service_id,
+            'service_name' => $a->service?->name ?? '-',
+            'stylist_id' => $a->stylist_id,
+            'price' => (float) ($a->service?->base_price ?? 0),
+            'time' => $a->starts_at->format('H:i'),
+        ]));
     }
 
     public function searchClients(Request $request)
