@@ -35,7 +35,7 @@ const form = useForm({
   image: null,
 })
 
-const globalIva = computed(() => page.props.tenantIva || 15)
+const globalIva = computed(() => page.props.tenantIva ?? 15)
 const ivaMode = ref(props.product?.iva_rate !== null && props.product?.iva_rate !== undefined ? 'custom' : 'global')
 const setIvaMode = (mode) => {
   ivaMode.value = mode

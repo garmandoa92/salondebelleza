@@ -209,7 +209,7 @@ onMounted(async () => {
   if (props.preItems.length) items.value = props.preItems.map(i => ({ ...i }))
 })
 
-const globalIva = computed(() => page.props.tenantIva || 15)
+const globalIva = computed(() => page.props.tenantIva ?? 15)
 
 const getItemIva = (item) => item.iva_rate ?? globalIva.value
 
