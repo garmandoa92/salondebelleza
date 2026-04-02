@@ -54,7 +54,7 @@ const statusColors = {
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card class="border-l-[3px] border-l-[var(--salon-primary)]">
+      <Card class="border-l-[3px] border-l-[var(--color-primary)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Ingresos hoy</p>
           <p class="text-2xl font-bold mt-1">${{ Number(kpis?.revenue_today || 0).toFixed(2) }}</p>
@@ -64,7 +64,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card class="border-l-[3px] border-l-[var(--salon-accent)]">
+      <Card class="border-l-[3px] border-l-[var(--color-accent)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Citas hoy</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.appointments_total || 0 }}</p>
@@ -76,7 +76,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card class="border-l-[3px] border-l-[var(--salon-primary)]">
+      <Card class="border-l-[3px] border-l-[var(--color-primary)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Clientes atendidos</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.clients_today || 0 }}</p>
@@ -84,7 +84,7 @@ const statusColors = {
         </CardContent>
       </Card>
 
-      <Card class="border-l-[3px] border-l-[var(--salon-accent)]">
+      <Card class="border-l-[3px] border-l-[var(--color-accent)]">
         <CardContent class="pt-4">
           <p class="text-xs text-gray-500 font-medium">Ocupacion</p>
           <p class="text-2xl font-bold mt-1">{{ kpis?.occupancy || 0 }}%</p>

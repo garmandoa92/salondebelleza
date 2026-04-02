@@ -46,8 +46,8 @@ const printClosing = () => window.open(`/salon/${tenantId}/print/closing/${new D
 
     <!-- Day summary -->
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-      <Card class="border-l-[3px] border-l-[var(--salon-primary)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.total || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Total hoy</p></CardContent></Card>
-      <Card class="border-l-[3px] border-l-[var(--salon-accent)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">{{ summary?.count || 0 }}</p><p class="text-xs text-gray-500">Ventas hoy</p></CardContent></Card>
+      <Card class="border-l-[3px] border-l-[var(--color-primary)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.total || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Total hoy</p></CardContent></Card>
+      <Card class="border-l-[3px] border-l-[var(--color-accent)]"><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">{{ summary?.count || 0 }}</p><p class="text-xs text-gray-500">Ventas hoy</p></CardContent></Card>
       <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.cash || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Efectivo</p></CardContent></Card>
       <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.card || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Tarjeta</p></CardContent></Card>
       <Card><CardContent class="pt-4 text-center"><p class="text-2xl font-bold">${{ Number(summary?.transfer || 0).toFixed(2) }}</p><p class="text-xs text-gray-500">Transferencia</p></CardContent></Card>
@@ -58,7 +58,7 @@ const printClosing = () => window.open(`/salon/${tenantId}/print/closing/${new D
       <CardContent class="pt-6 overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b text-left text-gray-500" style="background: var(--salon-primary-hover);">
+            <tr class="border-b text-left text-gray-500" style="background: var(--color-primary-5);">
               <th class="pb-2 font-medium">Fecha</th>
               <th class="pb-2 font-medium">Cliente</th>
               <th class="pb-2 font-medium text-center">Items</th>
@@ -68,7 +68,7 @@ const printClosing = () => window.open(`/salon/${tenantId}/print/closing/${new D
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sale in sales.data" :key="sale.id" class="border-b last:border-0 cursor-pointer transition-colors" style="--tw-bg-opacity:1;" @mouseenter="$event.currentTarget.style.background='var(--salon-primary-bg)'" @mouseleave="$event.currentTarget.style.background=''" @click="openSale(sale.id)">
+            <tr v-for="sale in sales.data" :key="sale.id" class="border-b last:border-0 cursor-pointer transition-colors" @mouseenter="$event.currentTarget.style.background='var(--color-primary-10)'" @mouseleave="$event.currentTarget.style.background=''" @click="openSale(sale.id)">
               <td class="py-3 text-gray-600">{{ formatDate(sale.completed_at || sale.created_at) }}</td>
               <td class="py-3 font-medium">{{ sale.client ? `${sale.client.first_name} ${sale.client.last_name}` : 'Sin cliente' }}</td>
               <td class="py-3 text-center">{{ sale.items?.length || 0 }}</td>

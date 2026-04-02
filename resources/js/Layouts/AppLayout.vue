@@ -31,18 +31,13 @@ const switchBranch = (branchId) => {
 
 // Theme colors
 const themeColors = computed(() => page.props.themeColors)
-watchEffect(() => {
-  const c = themeColors.value
-  if (!c) return
-  const root = document.documentElement
-  root.style.setProperty('--color-primary', c.primary)
-  root.style.setProperty('--color-accent', c.accent)
-  root.style.setProperty('--color-bg', c.bg)
-  root.style.setProperty('--color-text', c.text)
-  // Generate HSL for shadcn-vue primary override
-  root.style.setProperty('--primary', hexToHsl(c.primary))
-  root.style.setProperty('--primary-foreground', '0 0% 100%')
-})
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return { r, g, b }
+}
 
 function hexToHsl(hex) {
   let r = parseInt(hex.slice(1, 3), 16) / 255
@@ -59,6 +54,34 @@ function hexToHsl(hex) {
   }
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
 }
+
+function luminance(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+}
+
+const isDarkPrimary = computed(() => {
+  const c = themeColors.value?.primary || '#4A7C6F'
+  return luminance(c) < 0.35
+})
+
+watchEffect(() => {
+  const c = themeColors.value
+  if (!c) return
+  const root = document.documentElement
+  const { r, g, b } = hexToRgb(c.primary)
+
+  root.style.setProperty('--color-primary', c.primary)
+  root.style.setProperty('--color-accent', c.accent)
+  root.style.setProperty('--color-bg', c.bg)
+  root.style.setProperty('--color-text', c.text)
+  root.style.setProperty('--color-primary-10', `rgba(${r},${g},${b},0.10)`)
+  root.style.setProperty('--color-primary-5', `rgba(${r},${g},${b},0.05)`)
+  root.style.setProperty('--color-primary-15', `rgba(${r},${g},${b},0.15)`)
+  root.style.setProperty('--primary', hexToHsl(c.primary))
+  root.style.setProperty('--primary-foreground', '0 0% 100%')
+  root.style.setProperty('--ring', hexToHsl(c.primary))
+})
 
 const initials = computed(() => {
   if (!user.value?.name) return '?'
@@ -121,16 +144,18 @@ onMounted(() => {
     <!-- Desktop Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 transition-all duration-300 hidden lg:flex flex-col',
-        sidebarOpen ? 'w-64' : 'w-20'
+        'fixed inset-y-0 left-0 z-50 transition-all duration-300 hidden lg:flex flex-col border-r',
+        sidebarOpen ? 'w-64' : 'w-20',
+        isDarkPrimary ? 'border-white/10' : 'border-gray-200'
       ]"
-      style="background-color: var(--salon-sidebar);"
+      :style="{ backgroundColor: isDarkPrimary ? 'var(--color-primary)' : '#ffffff' }"
     >
-      <div class="flex items-center justify-between h-16 px-4 border-b border-white/10">
-        <span v-if="sidebarOpen" class="text-lg font-bold text-white truncate">
+      <div :class="['flex items-center justify-between h-16 px-4 border-b', isDarkPrimary ? 'border-white/10' : 'border-gray-200']">
+        <span v-if="sidebarOpen" :class="['text-lg font-bold truncate', isDarkPrimary ? 'text-white' : 'text-gray-900']">
           {{ tenant?.name || 'Salon SaaS' }}
         </span>
-        <button @click="sidebarOpen = !sidebarOpen" class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition">
+        <button @click="sidebarOpen = !sidebarOpen"
+          :class="['p-1.5 rounded-lg transition', isDarkPrimary ? 'text-white/60 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100']">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
@@ -143,13 +168,24 @@ onMounted(() => {
           :key="item.name"
           :href="item.href"
           :class="[
-            'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]',
             $page.url.startsWith(item.href)
-              ? 'bg-white/12 text-white border-l-[3px] border-[var(--salon-accent)]'
-              : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-[3px] border-transparent'
+              ? isDarkPrimary
+                ? 'bg-white/15 text-white border-white/60'
+                : 'text-[var(--color-primary)] border-[var(--color-primary)]'
+              : isDarkPrimary
+                ? 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                : 'text-gray-600 hover:text-gray-900 border-transparent'
           ]"
+          :style="$page.url.startsWith(item.href) && !isDarkPrimary ? { backgroundColor: 'var(--color-primary-10)' } : !$page.url.startsWith(item.href) && !isDarkPrimary ? { '--tw-bg-opacity': 1 } : {}"
+          @mouseenter="!$page.url.startsWith(item.href) && !isDarkPrimary && ($event.currentTarget.style.backgroundColor = 'var(--color-primary-5)')"
+          @mouseleave="!$page.url.startsWith(item.href) && !isDarkPrimary && ($event.currentTarget.style.backgroundColor = '')"
         >
-          <svg class="w-5 h-5 flex-shrink-0" :class="$page.url.startsWith(item.href) ? 'text-white' : 'text-white/50'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 flex-shrink-0"
+            :class="$page.url.startsWith(item.href)
+              ? isDarkPrimary ? 'text-white' : 'text-[var(--color-primary)]'
+              : isDarkPrimary ? 'text-white/50' : 'text-gray-400'"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
           </svg>
           <span v-if="sidebarOpen" class="ml-3 truncate">{{ item.name }}</span>
@@ -180,7 +216,7 @@ onMounted(() => {
     <!-- Main content -->
     <div :class="['transition-all duration-300', sidebarOpen ? 'lg:pl-64' : 'lg:pl-20']">
       <!-- Topbar -->
-      <header class="sticky top-0 z-40 bg-white" style="border-bottom: 2px solid var(--salon-primary);">
+      <header class="sticky top-0 z-40 bg-white" style="border-bottom: 2px solid var(--color-primary);">
         <div class="flex items-center justify-between h-16 px-4 sm:px-6">
           <!-- Mobile menu button -->
           <Sheet v-model:open="mobileOpen">
@@ -191,9 +227,9 @@ onMounted(() => {
                 </svg>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" class="w-64 p-0" style="background-color: var(--salon-sidebar);">
-              <div class="flex items-center h-16 px-4 border-b border-white/10">
-                <span class="text-lg font-bold text-white">{{ tenant?.name || 'Salon SaaS' }}</span>
+            <SheetContent side="left" class="w-64 p-0">
+              <div class="flex items-center h-16 px-4 border-b">
+                <span class="text-lg font-bold text-gray-900">{{ tenant?.name || 'Salon SaaS' }}</span>
               </div>
               <nav class="px-2 py-4 space-y-1">
                 <Link
@@ -202,13 +238,14 @@ onMounted(() => {
                   :href="item.href"
                   @click="mobileOpen = false"
                   :class="[
-                    'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]',
                     $page.url.startsWith(item.href)
-                      ? 'bg-white/12 text-white border-l-[3px] border-[var(--salon-accent)]'
-                      : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-[3px] border-transparent'
+                      ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
+                      : 'text-gray-600 hover:text-gray-900 border-transparent hover:bg-gray-50'
                   ]"
+                  :style="$page.url.startsWith(item.href) ? { backgroundColor: 'var(--color-primary-10)' } : {}"
                 >
-                  <svg class="w-5 h-5 mr-3" :class="$page.url.startsWith(item.href) ? 'text-white' : 'text-white/50'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 mr-3" :class="$page.url.startsWith(item.href) ? 'text-[var(--color-primary)]' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
                   </svg>
                   {{ item.name }}
