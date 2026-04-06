@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import { Button } from '@/components/ui/button'
