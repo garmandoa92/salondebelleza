@@ -41,7 +41,13 @@ class StylistService
             }
             $tenantSlug = tenant('id') ?? 'default';
             $data['photo_path'] = $photo->storeAs("stylists/{$tenantSlug}", uniqid() . '.' . $photo->getClientOriginalExtension(), 'public_central');
+        } elseif (!empty($data['remove_photo'])) {
+            if ($stylist->photo_path) {
+                Storage::disk('public_central')->delete($stylist->photo_path);
+            }
+            $data['photo_path'] = null;
         }
+        unset($data['remove_photo']);
 
         $branchIds = $data['branch_ids'] ?? null;
         unset($data['branch_ids']);

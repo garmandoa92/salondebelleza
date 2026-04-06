@@ -46,6 +46,7 @@ const form = useForm({
   commission_rules: props.stylist?.commission_rules || { default: 40, by_category: {} },
   branch_ids: props.stylist?.branches?.map(b => b.id) || [],
   photo: null,
+  remove_photo: false,
 })
 
 const toggleBranch = (id) => {
@@ -58,7 +59,14 @@ const photoPreview = ref(props.stylist?.photo_path ? `/storage/${props.stylist.p
 
 const onPhotoChange = (e) => {
   form.photo = e.target.files[0]
+  form.remove_photo = false
   if (form.photo) photoPreview.value = URL.createObjectURL(form.photo)
+}
+
+const removePhoto = () => {
+  photoPreview.value = null
+  form.photo = null
+  form.remove_photo = true
 }
 
 const submit = () => {
@@ -171,11 +179,17 @@ const removeCategoryException = (catId) => {
           <div class="space-y-2">
             <Label>Foto</Label>
             <div class="flex items-center gap-4">
-              <div v-if="photoPreview" class="w-16 h-16 rounded-full overflow-hidden shrink-0">
-                <img :src="photoPreview" class="w-full h-full object-cover" />
-              </div>
-              <div v-else class="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" :style="{ backgroundColor: form.color }">
-                {{ form.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?' }}
+              <div class="relative shrink-0">
+                <div v-if="photoPreview" class="w-16 h-16 rounded-full overflow-hidden">
+                  <img :src="photoPreview" class="w-full h-full object-cover" />
+                </div>
+                <div v-else class="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg" :style="{ backgroundColor: form.color }">
+                  {{ form.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?' }}
+                </div>
+                <button v-if="photoPreview" type="button" @click="removePhoto"
+                  class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 transition">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
               </div>
               <Input type="file" accept="image/*" @change="onPhotoChange" class="flex-1" />
             </div>
