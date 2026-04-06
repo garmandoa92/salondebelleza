@@ -25,16 +25,17 @@ class AppointmentPhotoService
 
         // Generate thumbnail
         $thumbPath = null;
+        $centralBase = Storage::disk('public_central')->path('');
         try {
             $thumbFilename = 'thumb_' . $filename;
-            $thumbFullPath = storage_path("app/public/{$dir}/{$thumbFilename}");
-            $sourceFullPath = storage_path("app/public/{$path}");
+            $sourceFullPath = $centralBase . $path;
+            $thumbFullPath = $centralBase . $dir . '/' . $thumbFilename;
 
-            if (function_exists('imagecreatefromjpeg') || extension_loaded('gd')) {
+            if (file_exists($sourceFullPath) && extension_loaded('gd')) {
                 $this->createThumbnail($sourceFullPath, $thumbFullPath, 300);
                 $thumbPath = "{$dir}/{$thumbFilename}";
             }
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             // Thumbnail generation failed, continue without it
         }
 
