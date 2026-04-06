@@ -29,6 +29,7 @@ class Client extends Model
         'visit_count',
         'last_visit_at',
         'source',
+        'photo_path',
         'is_active',
     ];
 

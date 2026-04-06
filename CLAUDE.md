@@ -158,6 +158,8 @@ resources/js/
 | 17b | docs/sesion-17b-anticipos.md | DONE | Anticipos y abonos | Post MVP |
 | 17c | docs/sesion-17c-reportes-excel.md | DONE | Reportes Excel completos | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
+| 19  | docs/sesion-19-fotos.md       | DONE | Módulo de fotos antes/después | Post MVP |
+| 19b | docs/sesion-19b-garantias.md  | Módulo de garantías           | Post MVP |
 
 ## Modulos implementados
 - **Auth**: registro salon, login central -> redirect a tenant, login tenant con token cross-domain
@@ -180,6 +182,7 @@ resources/js/
 - **Impresion Termica**: PrintService genera HTML para 80mm/58mm, tickets de venta/cita/cierre de caja/comisiones, botones en checkout/drawer/ventas
 - **Anticipos y Abonos**: ClientAdvance model, registro desde agenda/ficha cliente, aplicacion automatica en checkout, saldo a favor, panel dashboard
 - **Reportes Excel**: maatwebsite/excel, 7 exports (ventas, P&L, citas, clientes, comisiones, inventario, flujo caja) con hojas multiples y estilos
+- **Fotos Antes/Despues**: AppointmentPhoto model, subida con compresion, thumbnails GD, lightbox, tab Fotos en ficha cliente, foto perfil cliente
 
 <!-- MEMORY:START -->
 # salondebelleza

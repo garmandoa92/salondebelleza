@@ -145,12 +145,21 @@ const printerForm = useForm({
 })
 const submitPrinter = () => printerForm.put(`${base}/settings/printer`)
 
+// Photos form
+const photosForm = useForm({
+  photos_enabled: props.settings?.photos_enabled ?? true,
+  remind_photo_before: props.settings?.remind_photo_before ?? false,
+  remind_photo_after: props.settings?.remind_photo_after ?? false,
+})
+const submitPhotos = () => photosForm.put(`${base}/settings/photos`)
+
 const tabs = [
   { key: 'salon', label: 'Mi salon' },
   { key: 'sri', label: 'SRI / Facturacion' },
   { key: 'booking', label: 'Reservas online' },
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'printer', label: 'Impresora' },
+  { key: 'photos', label: 'Fotos' },
   { key: 'team', label: 'Equipo' },
   { key: 'billing', label: 'Suscripcion' },
 ]
@@ -448,6 +457,37 @@ const tabs = [
             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" v-model="waForm.whatsapp_invoices" class="rounded" /><span class="text-sm">Envio de facturas</span></label>
           </div>
           <Button type="submit" :disabled="waForm.processing">Guardar</Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <!-- Tab: Photos -->
+    <Card v-if="activeTab === 'photos'">
+      <CardHeader><CardTitle class="text-base">Modulo de fotos</CardTitle></CardHeader>
+      <CardContent>
+        <form @submit.prevent="submitPhotos" class="space-y-5">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <p class="text-sm font-medium">Habilitar modulo de fotos antes/despues</p>
+              <p class="text-xs text-gray-500">Documenta las transformaciones de tus clientes</p>
+            </div>
+            <input type="checkbox" v-model="photosForm.photos_enabled" class="rounded border-gray-300" />
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <p class="text-sm font-medium">Recordar tomar foto antes al iniciar cita</p>
+              <p class="text-xs text-gray-500">Muestra un prompt al marcar una cita como "En curso"</p>
+            </div>
+            <input type="checkbox" v-model="photosForm.remind_photo_before" class="rounded border-gray-300" />
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <p class="text-sm font-medium">Recordar tomar foto despues al completar cita</p>
+              <p class="text-xs text-gray-500">Muestra un prompt al marcar una cita como "Completada"</p>
+            </div>
+            <input type="checkbox" v-model="photosForm.remind_photo_after" class="rounded border-gray-300" />
+          </label>
+          <Button type="submit" :disabled="photosForm.processing">Guardar</Button>
         </form>
       </CardContent>
     </Card>

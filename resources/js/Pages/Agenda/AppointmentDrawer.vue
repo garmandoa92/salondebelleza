@@ -110,6 +110,55 @@ const status = computed(() => apt.value?.status?.value || apt.value?.status || '
 const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.value?.payment_status || 'pending')
 
 const printTicket = () => window.open(`${base}/print/appointment/${apt.value.id}`, '_blank', 'width=400,height=600')
+
+// ===== PHOTOS =====
+import { useImageCompressor } from '@/Composables/useImageCompressor'
+const { compress } = useImageCompressor()
+
+const photos = ref([])
+const uploadingPhoto = ref(false)
+const lightboxPhoto = ref(null)
+
+const loadPhotos = async () => {
+  if (!apt.value?.id) return
+  try {
+    const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}/photos`)
+    photos.value = data
+  } catch {}
+}
+
+watch(apt, (v) => { if (v && (status.value === 'in_progress' || status.value === 'completed')) loadPhotos() })
+
+const uploadPhoto = async (type) => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.capture = 'environment'
+  input.onchange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    uploadingPhoto.value = true
+    try {
+      const compressed = await compress(file)
+      const fd = new FormData()
+      fd.append('photo', compressed)
+      fd.append('type', type)
+      await axios.post(`${base}/agenda/appointments/${apt.value.id}/photos`, fd)
+      loadPhotos()
+    } finally { uploadingPhoto.value = false }
+  }
+  input.click()
+}
+
+const deletePhoto = async (photoId) => {
+  if (!confirm('Eliminar esta foto?')) return
+  await axios.delete(`${base}/agenda/appointments/${apt.value.id}/photos/${photoId}`)
+  loadPhotos()
+}
+
+const photosByType = (type) => photos.value.filter(p => p.type === type)
+const typeBadgeColor = (t) => ({ before: 'bg-amber-100 text-amber-700', after: 'bg-green-100 text-green-700', reference: 'bg-blue-100 text-blue-700', other: 'bg-gray-100 text-gray-600' }[t] || 'bg-gray-100')
+const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF', other: 'OTRA' }[t] || t)
 </script>
 
 <template>
@@ -187,6 +236,59 @@ const printTicket = () => window.open(`${base}/print/appointment/${apt.value.id}
           <div v-if="status === 'cancelled'" class="bg-red-50 rounded-lg p-3 text-sm">
             <p class="font-medium text-red-700">Cancelada por {{ apt.cancelled_by }}</p>
             <p v-if="apt.cancellation_reason" class="text-red-600">{{ apt.cancellation_reason }}</p>
+          </div>
+
+          <!-- Photos section -->
+          <div v-if="status === 'in_progress' || status === 'completed'" class="border-t pt-4">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm font-semibold text-gray-900">Fotos de la cita</p>
+              <span v-if="photos.length" class="text-[10px] font-medium text-gray-400">{{ photos.length }}</span>
+            </div>
+
+            <!-- Upload buttons -->
+            <div class="flex gap-2 mb-3">
+              <button @click="uploadPhoto('before')" :disabled="uploadingPhoto"
+                class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-amber-300 text-amber-700 text-xs font-medium hover:bg-amber-50 transition">
+                <span>📷</span> Antes
+              </button>
+              <button @click="uploadPhoto('after')" :disabled="uploadingPhoto"
+                class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-green-300 text-green-700 text-xs font-medium hover:bg-green-50 transition">
+                <span>📷</span> Despues
+              </button>
+              <button @click="uploadPhoto('reference')" :disabled="uploadingPhoto"
+                class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-blue-300 text-blue-700 text-xs font-medium hover:bg-blue-50 transition">
+                <span>📎</span> Ref
+              </button>
+            </div>
+
+            <p v-if="uploadingPhoto" class="text-xs text-gray-400 text-center mb-2">Subiendo foto...</p>
+
+            <!-- Photo grid -->
+            <div v-if="photos.length" class="grid grid-cols-4 gap-2">
+              <div v-for="p in photos" :key="p.id" class="relative group">
+                <img :src="`/storage/${p.thumbnail_path || p.photo_path}`"
+                  class="w-full aspect-square object-cover rounded-lg cursor-pointer"
+                  @click="lightboxPhoto = p" />
+                <span :class="[typeBadgeColor(p.type), 'absolute top-1 left-1 text-[8px] font-bold px-1 py-0.5 rounded']">{{ typeLabel(p.type) }}</span>
+                <button @click="deletePhoto(p.id)"
+                  class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+            <p v-else-if="!uploadingPhoto" class="text-xs text-gray-400 text-center py-3">Documenta la transformacion</p>
+          </div>
+
+          <!-- Lightbox -->
+          <div v-if="lightboxPhoto" class="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center" @click.self="lightboxPhoto = null">
+            <button @click="lightboxPhoto = null" class="absolute top-4 right-4 text-white/70 hover:text-white">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div class="max-w-2xl max-h-[80vh] mx-4">
+              <img :src="`/storage/${lightboxPhoto.photo_path}`" class="max-w-full max-h-[75vh] rounded-lg" />
+              <p v-if="lightboxPhoto.caption" class="text-white/70 text-sm text-center mt-2">{{ lightboxPhoto.caption }}</p>
+              <p class="text-white/40 text-xs text-center mt-1">{{ typeLabel(lightboxPhoto.type) }}</p>
+            </div>
           </div>
 
           <!-- Advance badge -->

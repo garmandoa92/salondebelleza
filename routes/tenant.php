@@ -27,6 +27,7 @@ use App\Http\Controllers\Tenant\BranchController;
 use App\Http\Controllers\Tenant\PackageController;
 use App\Http\Controllers\Tenant\PrintController;
 use App\Http\Controllers\Tenant\AdvanceController;
+use App\Http\Controllers\Tenant\AppointmentPhotoController;
 use App\Http\Controllers\Tenant\ExportController;
 
 Route::prefix('/salon/{tenant}')->middleware([
@@ -187,6 +188,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::put('settings/booking', [SettingsController::class, 'updateBooking'])->name('tenant.settings.booking');
         Route::put('settings/whatsapp', [SettingsController::class, 'updateWhatsapp'])->name('tenant.settings.whatsapp');
         Route::put('settings/printer', [SettingsController::class, 'updatePrinter'])->name('tenant.settings.printer');
+        Route::put('settings/photos', [SettingsController::class, 'updatePhotos'])->name('tenant.settings.photos');
         Route::put('settings/payments', [SettingsController::class, 'updatePayments'])->name('tenant.settings.payments');
         Route::post('settings/invite', [SettingsController::class, 'inviteUser'])->name('tenant.settings.invite');
         Route::patch('settings/users/{user}/toggle', [SettingsController::class, 'toggleUser'])->name('tenant.settings.toggle-user');
@@ -230,6 +232,13 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('packages/for-appointment', [PackageController::class, 'forAppointment'])->name('tenant.packages.for-appointment');
         Route::post('packages/use-session', [PackageController::class, 'useSession'])->name('tenant.packages.use-session');
         Route::get('packages/client/{clientId}', [PackageController::class, 'clientPackages'])->name('tenant.packages.client');
+
+        // Appointment Photos
+        Route::get('agenda/appointments/{appointment}/photos', [AppointmentPhotoController::class, 'index'])->name('tenant.appointment-photos.index');
+        Route::post('agenda/appointments/{appointment}/photos', [AppointmentPhotoController::class, 'store'])->name('tenant.appointment-photos.store');
+        Route::put('agenda/appointments/{appointment}/photos/{photo}', [AppointmentPhotoController::class, 'update'])->name('tenant.appointment-photos.update');
+        Route::delete('agenda/appointments/{appointment}/photos/{photo}', [AppointmentPhotoController::class, 'destroy'])->name('tenant.appointment-photos.destroy');
+        Route::get('clientes/{clientId}/photos', [AppointmentPhotoController::class, 'clientPhotos'])->name('tenant.client-photos');
 
         // Exports / Excel
         Route::get('exports/sales', [ExportController::class, 'sales'])->name('tenant.exports.sales');

@@ -202,6 +202,22 @@ class SettingsController extends Controller
         return back()->with('success', 'Configuracion de impresora actualizada.');
     }
 
+    public function updatePhotos(Request $request)
+    {
+        $data = $request->validate([
+            'photos_enabled' => ['boolean'],
+            'remind_photo_before' => ['boolean'],
+            'remind_photo_after' => ['boolean'],
+        ]);
+
+        $tenant = tenant();
+        $settings = $tenant->settings ?? [];
+        $settings = array_merge($settings, $data);
+        $tenant->update(['settings' => $settings]);
+
+        return back()->with('success', 'Configuracion de fotos actualizada.');
+    }
+
     public function updatePayments(Request $request)
     {
         $data = $request->validate([

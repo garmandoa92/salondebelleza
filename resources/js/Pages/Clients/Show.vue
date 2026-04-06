@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,22 @@ const loadAdvances = async () => {
   } catch {}
 }
 
+// Photos
+import { useImageCompressor } from '@/Composables/useImageCompressor'
+const { compress } = useImageCompressor()
+const clientPhotos = ref({})
+const lightboxPhoto = ref(null)
+
+const loadClientPhotos = async () => {
+  try {
+    const { data } = await axios.get(`${base}/clientes/${props.client.id}/photos`)
+    clientPhotos.value = data
+  } catch {}
+}
+const totalPhotos = computed(() => Object.values(clientPhotos.value).reduce((s, arr) => s + arr.length, 0))
+const typeBadgeColor = (t) => ({ before: 'bg-amber-100 text-amber-700', after: 'bg-green-100 text-green-700', reference: 'bg-blue-100 text-blue-700', other: 'bg-gray-100 text-gray-600' }[t] || 'bg-gray-100')
+const typePhotoLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF', other: 'OTRA' }[t] || t)
+
 // Advance modal
 const showAdvanceModal = ref(false)
 const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
@@ -69,7 +85,7 @@ const refundAdvance = async (id) => {
   loadAdvances()
 }
 
-onMounted(() => { loadPackages(); loadAdvances() })
+onMounted(() => { loadPackages(); loadAdvances(); loadClientPhotos() })
 
 const initials = ((props.client.first_name?.[0] || '') + (props.client.last_name?.[0] || '')).toUpperCase()
 
@@ -102,6 +118,7 @@ const tabItems = [
   { key: 'compras', label: 'Compras', count: () => props.sales?.length || 0 },
   { key: 'saldo', label: 'Saldo', count: () => advances.value.length },
   { key: 'paquetes', label: 'Paquetes', count: () => clientPackages.value.length },
+  { key: 'fotos', label: 'Fotos', count: () => totalPhotos.value },
   { key: 'futuras', label: 'Futuras', count: () => props.futureAppointments?.length || 0 },
 ]
 </script>
@@ -131,8 +148,11 @@ const tabItems = [
           <CardContent class="pt-6">
             <!-- Avatar + Name -->
             <div class="text-center">
-              <div class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-white" style="background-color: var(--color-primary);">
-                {{ initials }}
+              <div class="relative w-20 h-20 mx-auto">
+                <img v-if="client.photo_path" :src="`/storage/${client.photo_path}`" class="w-20 h-20 rounded-full object-cover" />
+                <div v-else class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white" style="background-color: var(--color-primary);">
+                  {{ initials }}
+                </div>
               </div>
               <h2 class="mt-3" style="font-size:20px; font-weight:600; color:#1A2420;">{{ client.first_name }} {{ client.last_name }}</h2>
               <a v-if="client.phone" :href="`https://wa.me/593${client.phone?.replace(/^0/, '')}`" target="_blank"
@@ -261,6 +281,14 @@ const tabItems = [
                     <p style="font-size:14px; font-weight:600; color:#1A2420;">{{ apt.service?.name }}</p>
                     <p class="t-meta mt-0.5">{{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — <span class="t-name" style="font-size:12px;">{{ apt.stylist?.name }}</span></p>
                     <p v-if="apt.notes" class="t-meta mt-1 italic">{{ apt.notes }}</p>
+                    <!-- Photo thumbnails -->
+                    <div v-if="clientPhotos[apt.id]?.length" class="flex gap-1 mt-1.5">
+                      <img v-for="p in clientPhotos[apt.id].slice(0, 4)" :key="p.id"
+                        :src="`/storage/${p.thumbnail_path || p.photo_path}`"
+                        class="w-9 h-9 rounded object-cover cursor-pointer hover:opacity-80"
+                        @click="lightboxPhoto = p" />
+                      <span v-if="clientPhotos[apt.id].length > 4" class="w-9 h-9 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-500">+{{ clientPhotos[apt.id].length - 4 }}</span>
+                    </div>
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">
@@ -433,6 +461,54 @@ const tabItems = [
             <p v-else class="text-sm text-gray-400 text-center py-6">Este cliente no tiene paquetes</p>
           </CardContent>
         </Card>
+
+        <!-- Tab: Fotos -->
+        <Card v-if="activeTab === 'fotos'">
+          <CardContent class="pt-4">
+            <template v-if="totalPhotos > 0">
+              <div v-for="(groupPhotos, aptId) in clientPhotos" :key="aptId" class="mb-6 last:mb-0">
+                <!-- Appointment header -->
+                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                  <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: groupPhotos[0]?.appointment?.stylist?.color || '#94a3b8' }" />
+                  <span class="text-sm font-semibold text-gray-900">{{ groupPhotos[0]?.appointment?.service?.name || 'Cita' }}</span>
+                  <span class="t-meta">{{ new Date(groupPhotos[0]?.created_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) }}</span>
+                  <span class="t-meta">· {{ groupPhotos[0]?.appointment?.stylist?.name }}</span>
+                </div>
+
+                <!-- Before/After side by side -->
+                <div class="flex gap-3 items-start">
+                  <div v-for="p in groupPhotos" :key="p.id" class="relative group">
+                    <img :src="`/storage/${p.thumbnail_path || p.photo_path}`"
+                      class="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition"
+                      @click="lightboxPhoto = p" />
+                    <span :class="[typeBadgeColor(p.type), 'absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded']">{{ typePhotoLabel(p.type) }}</span>
+                    <p v-if="p.caption" class="text-[11px] text-gray-500 italic mt-1 max-w-[128px] truncate">{{ p.caption }}</p>
+                  </div>
+                  <div v-if="groupPhotos.some(p => p.type === 'before') && groupPhotos.some(p => p.type === 'after')"
+                    class="self-center text-gray-300 text-xl hidden sm:block" style="margin-left: -8px; margin-right: -8px;">→</div>
+                </div>
+              </div>
+            </template>
+            <div v-else class="text-center py-10">
+              <p class="text-3xl mb-2">📷</p>
+              <p class="text-sm text-gray-500 mb-1">Este cliente no tiene fotos aun.</p>
+              <p class="text-xs text-gray-400">Las fotos se agregan desde cada cita en la agenda.</p>
+              <Link :href="`${base}/agenda`" class="t-action text-xs mt-3 inline-block">Ir a la agenda</Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Lightbox -->
+        <div v-if="lightboxPhoto" class="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center" @click.self="lightboxPhoto = null">
+          <button @click="lightboxPhoto = null" class="absolute top-4 right-4 text-white/70 hover:text-white">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <div class="max-w-2xl max-h-[80vh] mx-4">
+            <img :src="`/storage/${lightboxPhoto.photo_path}`" class="max-w-full max-h-[75vh] rounded-lg" />
+            <p v-if="lightboxPhoto.caption" class="text-white/70 text-sm text-center mt-2">{{ lightboxPhoto.caption }}</p>
+            <p class="text-white/40 text-xs text-center mt-1">{{ typePhotoLabel(lightboxPhoto.type) }}</p>
+          </div>
+        </div>
 
         <!-- Tab: Futuras -->
         <Card v-if="activeTab === 'futuras'">
