@@ -234,7 +234,8 @@ const isCatOpen = (id) => openCategory.value === '__all__' || openCategory.value
         class="w-full text-left bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all"
       >
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm" :style="{ backgroundColor: s.color }">
+          <img v-if="s.photo_path" :src="`/storage/${s.photo_path}`" class="w-12 h-12 rounded-full object-cover" />
+          <div v-else class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm" :style="{ backgroundColor: s.color }">
             {{ s.name.split(' ').map(n => n[0]).join('') }}
           </div>
           <div class="flex-1 min-w-0">

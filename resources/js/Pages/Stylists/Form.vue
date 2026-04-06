@@ -54,12 +54,19 @@ const toggleBranch = (id) => {
   else form.branch_ids.push(id)
 }
 
+const photoPreview = ref(props.stylist?.photo_path ? `/storage/${props.stylist.photo_path}` : null)
+
+const onPhotoChange = (e) => {
+  form.photo = e.target.files[0]
+  if (form.photo) photoPreview.value = URL.createObjectURL(form.photo)
+}
+
 const submit = () => {
   if (isEditing.value) {
-    form.post(`/salon/${tenantId}/estilistas/${props.stylist.id}`, {
-      _method: 'put',
-      forceFormData: true,
-    })
+    form.transform((data) => ({ ...data, _method: 'PUT' }))
+      .post(`/salon/${tenantId}/estilistas/${props.stylist.id}`, {
+        forceFormData: true,
+      })
   } else {
     form.post(`/salon/${tenantId}/estilistas`, {
       forceFormData: true,
@@ -163,7 +170,15 @@ const removeCategoryException = (catId) => {
 
           <div class="space-y-2">
             <Label>Foto</Label>
-            <Input type="file" accept="image/*" @change="form.photo = $event.target.files[0]" />
+            <div class="flex items-center gap-4">
+              <div v-if="photoPreview" class="w-16 h-16 rounded-full overflow-hidden shrink-0">
+                <img :src="photoPreview" class="w-full h-full object-cover" />
+              </div>
+              <div v-else class="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" :style="{ backgroundColor: form.color }">
+                {{ form.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?' }}
+              </div>
+              <Input type="file" accept="image/*" @change="onPhotoChange" class="flex-1" />
+            </div>
           </div>
         </CardContent>
       </Card>

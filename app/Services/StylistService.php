@@ -12,7 +12,8 @@ class StylistService
     public function store(array $data, $photo = null): Stylist
     {
         if ($photo) {
-            $data['photo_path'] = $photo->store('stylists', 'public');
+            $tenantSlug = tenant('id') ?? 'default';
+            $data['photo_path'] = $photo->storeAs("stylists/{$tenantSlug}", uniqid() . '.' . $photo->getClientOriginalExtension(), 'public_central');
         }
 
         $stylist = Stylist::create($data);
@@ -36,9 +37,10 @@ class StylistService
     {
         if ($photo) {
             if ($stylist->photo_path) {
-                Storage::disk('public')->delete($stylist->photo_path);
+                Storage::disk('public_central')->delete($stylist->photo_path);
             }
-            $data['photo_path'] = $photo->store('stylists', 'public');
+            $tenantSlug = tenant('id') ?? 'default';
+            $data['photo_path'] = $photo->storeAs("stylists/{$tenantSlug}", uniqid() . '.' . $photo->getClientOriginalExtension(), 'public_central');
         }
 
         $branchIds = $data['branch_ids'] ?? null;
@@ -56,7 +58,7 @@ class StylistService
     public function delete(Stylist $stylist): void
     {
         if ($stylist->photo_path) {
-            Storage::disk('public')->delete($stylist->photo_path);
+            Storage::disk('public_central')->delete($stylist->photo_path);
         }
         $stylist->delete();
     }
