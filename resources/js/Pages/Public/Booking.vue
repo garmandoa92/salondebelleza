@@ -22,7 +22,6 @@ const loadingSlots = ref(false)
 const saving = ref(false)
 const confirmation = ref(null)
 
-// Selections
 const selectedService = ref(null)
 const selectedStylist = ref(null)
 const selectedDate = ref('')
@@ -30,21 +29,18 @@ const selectedTime = ref('')
 const clientData = ref({ first_name: '', last_name: '', phone: '', email: '', notes: '' })
 const acceptedPolicy = ref(false)
 
-// Load services on mount
 const loadServices = async () => {
   const { data } = await axios.get(`${base}/reservar/services`)
   categories.value = data
 }
 loadServices()
 
-// Load stylists when service selected
 watch(selectedService, async (svc) => {
   if (!svc) return
   const { data } = await axios.get(`${base}/reservar/stylists`, { params: { service_id: svc.id } })
   stylists.value = data
 })
 
-// Load availability when stylist + date selected
 watch([selectedStylist, selectedDate], async () => {
   if (!selectedStylist.value || !selectedDate.value || !selectedService.value) return
   loadingSlots.value = true
@@ -92,190 +88,252 @@ const formatDuration = (mins) => {
   const m = mins % 60
   return m ? `${h}h ${m}min` : `${h}h`
 }
+
+const steps = [
+  { n: 1, label: 'Servicio' },
+  { n: 2, label: 'Estilista' },
+  { n: 3, label: 'Horario' },
+  { n: 4, label: 'Confirmar' },
+]
 </script>
 
 <template>
   <Head title="Reservar cita" />
 
-  <div class="max-w-lg mx-auto px-4 py-8">
-    <!-- Progress bar -->
-    <div v-if="step < 5" class="flex mb-8">
-      <div
-        v-for="s in [{ n: 1, l: 'Servicio' }, { n: 2, l: 'Estilista' }, { n: 3, l: 'Horario' }, { n: 4, l: 'Datos' }]"
-        :key="s.n"
-        :class="['flex-1 text-center text-xs pb-2 border-b-2 font-medium transition-colors',
-          step === s.n ? 'border-primary text-primary' : step > s.n ? 'border-green-500 text-green-600' : 'border-gray-200 text-gray-400']"
-      >{{ s.l }}</div>
+  <div class="max-w-lg mx-auto px-4 py-6">
+
+    <!-- Hero text -->
+    <div v-if="step < 5" class="text-center mb-6">
+      <h1 class="text-[22px] font-bold text-gray-900">Reserva tu cita</h1>
+      <p class="text-sm text-gray-500 mt-1">Selecciona servicio, estilista y horario</p>
     </div>
 
-    <!-- Step 1: Service -->
+    <!-- Progress -->
+    <div v-if="step < 5" class="flex items-center justify-between mb-8 px-2">
+      <template v-for="(s, i) in steps" :key="s.n">
+        <div class="flex flex-col items-center gap-1">
+          <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all',
+            step === s.n ? 'border-[var(--color-primary)] text-white' : step > s.n ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 text-gray-400 bg-white']"
+            :style="step === s.n ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)' } : {}">
+            <svg v-if="step > s.n" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            <span v-else>{{ s.n }}</span>
+          </div>
+          <span :class="['text-[10px] font-medium', step >= s.n ? 'text-gray-700' : 'text-gray-400']">{{ s.label }}</span>
+        </div>
+        <div v-if="i < steps.length - 1" :class="['flex-1 h-0.5 mx-1 -mt-4 rounded-full transition-colors', step > s.n ? 'bg-green-500' : 'bg-gray-200']" />
+      </template>
+    </div>
+
+    <!-- ===== STEP 1: SERVICE ===== -->
     <div v-if="step === 1" class="space-y-4">
-      <h2 class="text-lg font-semibold text-gray-900">Elige tu servicio</h2>
       <div v-for="cat in categories" :key="cat.id">
-        <div v-if="cat.services?.length" class="space-y-2 mb-4">
-          <p class="text-xs font-medium text-gray-500 flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: cat.color }" />
-            {{ cat.name }}
-          </p>
-          <button
-            v-for="svc in cat.services"
-            :key="svc.id"
-            @click="selectedService = svc; step = 2"
-            :class="['w-full text-left border rounded-xl p-4 transition-all',
-              selectedService?.id === svc.id ? 'border-primary bg-primary/5 shadow-sm' : 'hover:bg-gray-50']"
-          >
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="font-medium text-gray-900">{{ svc.name }}</p>
-                <p class="text-sm text-gray-500">{{ formatDuration(svc.duration_minutes) }}</p>
+        <div v-if="cat.services?.length" class="mb-5">
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: cat.color }" />
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ cat.name }}</span>
+            <span class="text-[10px] text-gray-400">{{ cat.services.length }}</span>
+          </div>
+          <div class="space-y-2">
+            <button
+              v-for="svc in cat.services"
+              :key="svc.id"
+              @click="selectedService = svc; step = 2"
+              class="w-full text-left bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all group"
+            >
+              <div class="flex justify-between items-center">
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-[14px] text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{{ svc.name }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDuration(svc.duration_minutes) }}</p>
+                </div>
+                <div class="text-right shrink-0 ml-3">
+                  <p class="font-bold text-[15px] text-gray-900">${{ Number(svc.base_price).toFixed(2) }}</p>
+                </div>
               </div>
-              <p class="font-semibold text-gray-900">${{ Number(svc.base_price).toFixed(2) }}</p>
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Step 2: Stylist -->
-    <div v-if="step === 2" class="space-y-4">
-      <h2 class="text-lg font-semibold text-gray-900">Elige tu estilista</h2>
+    <!-- ===== STEP 2: STYLIST ===== -->
+    <div v-if="step === 2" class="space-y-3">
+      <!-- Selected service pill -->
+      <div class="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2 mb-2">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span class="text-sm text-gray-600">{{ selectedService?.name }}</span>
+        <span class="text-xs text-gray-400">· {{ formatDuration(selectedService?.duration_minutes) }} · ${{ Number(selectedService?.base_price || 0).toFixed(2) }}</span>
+        <button @click="step = 1" class="ml-auto text-xs text-gray-400 hover:text-gray-600">Cambiar</button>
+      </div>
 
       <button
         @click="selectedStylist = stylists[0]; step = 3"
-        class="w-full text-left border rounded-xl p-4 hover:bg-gray-50"
+        class="w-full text-left bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all"
       >
-        <p class="font-medium text-gray-900">Sin preferencia</p>
-        <p class="text-sm text-gray-500">Cualquier estilista disponible</p>
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-900">Sin preferencia</p>
+            <p class="text-xs text-gray-500">Cualquier estilista disponible</p>
+          </div>
+        </div>
       </button>
 
       <button
         v-for="s in stylists"
         :key="s.id"
         @click="selectedStylist = s; step = 3"
-        class="w-full text-left border rounded-xl p-4 hover:bg-gray-50 flex items-center gap-3"
+        class="w-full text-left bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all"
       >
-        <div
-          class="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-          :style="{ backgroundColor: s.color }"
-        >{{ s.name.split(' ').map(n => n[0]).join('') }}</div>
-        <div>
-          <p class="font-medium text-gray-900">{{ s.name }}</p>
-          <p v-if="s.bio" class="text-sm text-gray-500 line-clamp-1">{{ s.bio }}</p>
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm" :style="{ backgroundColor: s.color }">
+            {{ s.name.split(' ').map(n => n[0]).join('') }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-900">{{ s.name }}</p>
+            <p v-if="s.bio" class="text-xs text-gray-500 line-clamp-1 mt-0.5">{{ s.bio }}</p>
+          </div>
         </div>
       </button>
-
-      <button @click="step = 1" class="text-sm text-gray-500 hover:underline">&larr; Cambiar servicio</button>
     </div>
 
-    <!-- Step 3: Date/Time -->
+    <!-- ===== STEP 3: DATE/TIME ===== -->
     <div v-if="step === 3" class="space-y-4">
-      <h2 class="text-lg font-semibold text-gray-900">Elige fecha y hora</h2>
-
-      <div class="space-y-2">
-        <Label>Fecha</Label>
-        <Input v-model="selectedDate" type="date" :min="minDate" />
-      </div>
-
-      <div v-if="selectedDate" class="space-y-2">
-        <Label>Horarios disponibles</Label>
-        <div v-if="loadingSlots" class="text-sm text-gray-400 py-4 text-center">Cargando...</div>
-        <div v-else-if="availableSlots.length" class="grid grid-cols-4 gap-2">
-          <button
-            v-for="slot in availableSlots"
-            :key="slot.time"
-            @click="selectedTime = slot.time"
-            :class="['py-2.5 text-sm rounded-lg border font-medium transition-all',
-              selectedTime === slot.time ? 'bg-primary text-white border-primary shadow-sm' : 'hover:bg-gray-50']"
-          >{{ slot.time }}</button>
+      <!-- Selected service + stylist pills -->
+      <div class="space-y-1.5 mb-2">
+        <div class="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2">
+          <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="text-sm text-gray-600">{{ selectedService?.name }}</span>
+          <span class="text-xs text-gray-400">· ${{ Number(selectedService?.base_price || 0).toFixed(2) }}</span>
         </div>
-        <p v-else class="text-sm text-gray-400 py-4 text-center">No hay horarios disponibles este dia</p>
-
-        <p v-if="selectedTime" class="text-xs text-gray-500 text-center">
-          {{ selectedTime }} — {{ endTime }} ({{ formatDuration(selectedService.duration_minutes) }})
-        </p>
+        <div class="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2">
+          <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="text-sm text-gray-600">{{ selectedStylist?.name }}</span>
+          <button @click="step = 2" class="ml-auto text-xs text-gray-400 hover:text-gray-600">Cambiar</button>
+        </div>
       </div>
 
-      <div class="flex justify-between pt-2">
-        <button @click="step = 2" class="text-sm text-gray-500 hover:underline">&larr; Cambiar estilista</button>
-        <Button :disabled="!selectedTime" @click="step = 4">Siguiente</Button>
+      <div class="bg-white border border-gray-100 rounded-xl p-4 space-y-4">
+        <div class="space-y-1.5">
+          <Label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</Label>
+          <Input v-model="selectedDate" type="date" :min="minDate" class="text-center font-medium" />
+        </div>
+
+        <div v-if="selectedDate" class="space-y-2">
+          <Label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Horarios disponibles</Label>
+          <div v-if="loadingSlots" class="text-sm text-gray-400 py-6 text-center">
+            <div class="w-6 h-6 border-2 border-gray-300 border-t-[var(--color-primary)] rounded-full animate-spin mx-auto mb-2" />
+            Buscando horarios...
+          </div>
+          <div v-else-if="availableSlots.length" class="grid grid-cols-4 gap-2">
+            <button
+              v-for="slot in availableSlots"
+              :key="slot.time"
+              @click="selectedTime = slot.time"
+              :class="['py-2.5 text-sm rounded-lg border-2 font-semibold transition-all',
+                selectedTime === slot.time
+                  ? 'text-white shadow-sm'
+                  : 'border-gray-100 bg-white text-gray-700 hover:border-gray-300']"
+              :style="selectedTime === slot.time ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)' } : {}"
+            >{{ slot.time }}</button>
+          </div>
+          <p v-else class="text-sm text-gray-400 py-6 text-center">No hay horarios disponibles este dia</p>
+        </div>
+
+        <div v-if="selectedTime" class="text-center pt-2 border-t border-gray-50">
+          <p class="text-sm font-medium text-gray-900">{{ selectedTime }} — {{ endTime }}</p>
+          <p class="text-xs text-gray-500">{{ formatDuration(selectedService.duration_minutes) }} con {{ selectedStylist?.name }}</p>
+        </div>
       </div>
+
+      <Button :disabled="!selectedTime" @click="step = 4" class="w-full py-3 text-sm font-semibold">
+        Continuar
+      </Button>
     </div>
 
-    <!-- Step 4: Client data -->
+    <!-- ===== STEP 4: CLIENT DATA + CONFIRM ===== -->
     <div v-if="step === 4" class="space-y-4">
-      <h2 class="text-lg font-semibold text-gray-900">Tus datos</h2>
+      <!-- Summary ticket -->
+      <div class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-50" style="background: var(--color-primary); color: #fff;">
+          <p class="text-xs font-semibold uppercase tracking-wider opacity-80">Resumen de tu cita</p>
+        </div>
+        <div class="p-4 space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-gray-500">Servicio</span><span class="font-semibold text-gray-900">{{ selectedService?.name }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Estilista</span><span class="font-medium text-gray-900">{{ selectedStylist?.name }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Fecha</span><span class="font-medium text-gray-900">{{ new Date(selectedDate + 'T12:00').toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' }) }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Hora</span><span class="font-medium text-gray-900">{{ selectedTime }} — {{ endTime }}</span></div>
+          <div class="flex justify-between border-t border-gray-50 pt-2 mt-1"><span class="text-gray-500">Precio</span><span class="font-bold text-lg" style="color: var(--color-primary);">${{ Number(selectedService?.base_price || 0).toFixed(2) }}</span></div>
+        </div>
+      </div>
 
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <Label>Nombre</Label>
-          <Input v-model="clientData.first_name" required />
+      <!-- Client form -->
+      <div class="bg-white border border-gray-100 rounded-xl p-4 space-y-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tus datos</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <Label class="text-xs text-gray-500">Nombre</Label>
+            <Input v-model="clientData.first_name" required />
+          </div>
+          <div class="space-y-1">
+            <Label class="text-xs text-gray-500">Apellido</Label>
+            <Input v-model="clientData.last_name" required />
+          </div>
         </div>
         <div class="space-y-1">
-          <Label>Apellido</Label>
-          <Input v-model="clientData.last_name" required />
+          <Label class="text-xs text-gray-500">Telefono</Label>
+          <Input v-model="clientData.phone" type="tel" placeholder="09XXXXXXXX" required />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs text-gray-500">Email (opcional)</Label>
+          <Input v-model="clientData.email" type="email" placeholder="correo@ejemplo.com" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs text-gray-500">Notas (opcional)</Label>
+          <textarea v-model="clientData.notes" class="flex min-h-[50px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm" rows="2" placeholder="Algo que debamos saber..." />
         </div>
       </div>
 
-      <div class="space-y-1">
-        <Label>Telefono</Label>
-        <Input v-model="clientData.phone" type="tel" placeholder="09XXXXXXXX" required />
-      </div>
-
-      <div class="space-y-1">
-        <Label>Email (opcional)</Label>
-        <Input v-model="clientData.email" type="email" />
-      </div>
-
-      <div class="space-y-1">
-        <Label>Notas (opcional)</Label>
-        <textarea v-model="clientData.notes" class="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" rows="2" placeholder="Algo que debamos saber..." />
-      </div>
-
-      <!-- Summary -->
-      <Card>
-        <CardContent class="pt-4 space-y-1 text-sm">
-          <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ selectedService?.name }}</span></p>
-          <p><span class="text-gray-500">Estilista:</span> <span class="font-medium">{{ selectedStylist?.name }}</span></p>
-          <p><span class="text-gray-500">Fecha:</span> <span class="font-medium">{{ selectedDate }}</span></p>
-          <p><span class="text-gray-500">Hora:</span> <span class="font-medium">{{ selectedTime }} — {{ endTime }}</span></p>
-          <p><span class="text-gray-500">Precio:</span> <span class="font-semibold">${{ Number(selectedService?.base_price || 0).toFixed(2) }}</span></p>
-        </CardContent>
-      </Card>
-
-      <label class="flex items-start gap-2 cursor-pointer">
-        <input type="checkbox" v-model="acceptedPolicy" class="rounded border-gray-300 mt-0.5" />
-        <span class="text-xs text-gray-500">Acepto la politica de cancelacion. Puedo cancelar mi cita hasta 2 horas antes sin costo.</span>
+      <label class="flex items-start gap-2.5 cursor-pointer px-1">
+        <input type="checkbox" v-model="acceptedPolicy" class="rounded border-gray-300 mt-0.5" style="accent-color: var(--color-primary);" />
+        <span class="text-xs text-gray-500 leading-relaxed">Acepto la politica de cancelacion. Puedo cancelar mi cita hasta 2 horas antes sin costo.</span>
       </label>
 
-      <div class="flex justify-between pt-2">
-        <button @click="step = 3" class="text-sm text-gray-500 hover:underline">&larr; Cambiar horario</button>
-        <Button :disabled="!canSubmit || saving" @click="submit">
+      <div class="flex gap-3 pt-1">
+        <button @click="step = 3" class="flex-1 py-3 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition">Atras</button>
+        <Button :disabled="!canSubmit || saving" @click="submit" class="flex-1 py-3 text-sm font-semibold">
           {{ saving ? 'Reservando...' : 'Confirmar cita' }}
         </Button>
       </div>
     </div>
 
-    <!-- Step 5: Confirmation -->
+    <!-- ===== STEP 5: CONFIRMATION ===== -->
     <div v-if="step === 5 && confirmation" class="text-center space-y-6 py-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
-        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full" style="background-color: var(--color-primary); opacity: 0.1;">
+        <div class="absolute w-20 h-20 rounded-full flex items-center justify-center">
+          <svg class="w-10 h-10" style="color: var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
       </div>
 
       <div>
         <h2 class="text-xl font-bold text-gray-900">Cita reservada</h2>
-        <p class="text-gray-500 mt-1">Te enviaremos una confirmacion por WhatsApp</p>
+        <p class="text-sm text-gray-500 mt-1">Te enviaremos una confirmacion por WhatsApp</p>
       </div>
 
-      <Card>
-        <CardContent class="pt-4 space-y-2 text-sm text-left">
-          <p><span class="text-gray-500">Servicio:</span> <span class="font-medium">{{ confirmation.service }}</span></p>
-          <p><span class="text-gray-500">Estilista:</span> <span class="font-medium">{{ confirmation.stylist }}</span></p>
-          <p><span class="text-gray-500">Fecha:</span> <span class="font-medium">{{ confirmation.date }}</span></p>
-          <p><span class="text-gray-500">Hora:</span> <span class="font-medium">{{ confirmation.time }}</span> ({{ confirmation.duration }}min)</p>
-        </CardContent>
-      </Card>
+      <div class="bg-white border border-gray-100 rounded-xl overflow-hidden text-left">
+        <div class="px-4 py-3 border-b border-gray-50" style="background: var(--color-primary); color: #fff;">
+          <p class="text-xs font-semibold uppercase tracking-wider opacity-80">Detalles de tu cita</p>
+        </div>
+        <div class="p-4 space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-gray-500">Servicio</span><span class="font-semibold">{{ confirmation.service }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Estilista</span><span class="font-medium">{{ confirmation.stylist }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Fecha</span><span class="font-medium">{{ confirmation.date }}</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Hora</span><span class="font-medium">{{ confirmation.time }} ({{ confirmation.duration }}min)</span></div>
+        </div>
+      </div>
 
       <p class="text-xs text-gray-400">Puedes cancelar tu cita hasta 2 horas antes sin costo</p>
     </div>
