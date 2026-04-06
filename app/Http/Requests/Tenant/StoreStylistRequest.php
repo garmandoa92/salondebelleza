@@ -20,6 +20,8 @@ class StoreStylistRequest extends FormRequest
             'bio' => ['nullable', 'string', 'max:1000'],
             'color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'photo' => ['nullable', 'image', 'max:2048'],
+            'branch_ids' => ['nullable', 'array'],
+            'branch_ids.*' => ['uuid'],
             'specialties' => ['nullable', 'array'],
             'specialties.*' => ['uuid', 'exists:service_categories,id'],
             'schedule' => ['nullable', 'array'],
