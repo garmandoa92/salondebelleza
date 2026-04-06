@@ -95,6 +95,38 @@ const steps = [
   { n: 3, label: 'Horario' },
   { n: 4, label: 'Confirmar' },
 ]
+
+// Step 1: search + accordion
+const serviceSearch = ref('')
+const openCategory = ref(null)
+
+const filteredCategories = computed(() => {
+  const q = serviceSearch.value.toLowerCase().trim()
+  if (!q) return categories.value.filter(c => c.services?.length)
+  return categories.value
+    .map(c => ({
+      ...c,
+      services: (c.services || []).filter(s => s.name.toLowerCase().includes(q)),
+    }))
+    .filter(c => c.services.length)
+})
+
+// Open first category by default when loaded
+watch(categories, (cats) => {
+  if (cats.length && !openCategory.value) openCategory.value = cats[0].id
+})
+
+const toggleCategory = (id) => {
+  openCategory.value = openCategory.value === id ? null : id
+}
+
+// When searching, open all matching categories
+watch(serviceSearch, (q) => {
+  if (q.trim()) openCategory.value = '__all__'
+  else if (categories.value.length) openCategory.value = categories.value[0].id
+})
+
+const isCatOpen = (id) => openCategory.value === '__all__' || openCategory.value === id
 </script>
 
 <template>
@@ -125,34 +157,49 @@ const steps = [
     </div>
 
     <!-- ===== STEP 1: SERVICE ===== -->
-    <div v-if="step === 1" class="space-y-4">
-      <div v-for="cat in categories" :key="cat.id">
-        <div v-if="cat.services?.length" class="mb-5">
-          <div class="flex items-center gap-2 mb-2.5">
-            <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: cat.color }" />
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ cat.name }}</span>
-            <span class="text-[10px] text-gray-400">{{ cat.services.length }}</span>
+    <div v-if="step === 1" class="space-y-3">
+      <!-- Search -->
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <Input v-model="serviceSearch" placeholder="Buscar servicio..." class="pl-9 bg-white" />
+      </div>
+
+      <!-- Accordions -->
+      <div v-for="cat in filteredCategories" :key="cat.id" class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <!-- Category header -->
+        <button @click="toggleCategory(cat.id)" class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: cat.color }" />
+            <span class="text-sm font-semibold text-gray-900">{{ cat.name }}</span>
+            <span class="text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">{{ cat.services.length }}</span>
           </div>
-          <div class="space-y-2">
-            <button
-              v-for="svc in cat.services"
-              :key="svc.id"
-              @click="selectedService = svc; step = 2"
-              class="w-full text-left bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all group"
-            >
-              <div class="flex justify-between items-center">
-                <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-[14px] text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{{ svc.name }}</p>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDuration(svc.duration_minutes) }}</p>
-                </div>
-                <div class="text-right shrink-0 ml-3">
-                  <p class="font-bold text-[15px] text-gray-900">${{ Number(svc.base_price).toFixed(2) }}</p>
-                </div>
+          <svg :class="['w-4 h-4 text-gray-400 transition-transform', isCatOpen(cat.id) && 'rotate-180']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <!-- Services (collapsible) -->
+        <div v-if="isCatOpen(cat.id)" class="border-t border-gray-50">
+          <button
+            v-for="svc in cat.services"
+            :key="svc.id"
+            @click="selectedService = svc; serviceSearch = ''; step = 2"
+            class="w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-[#F4F9F7] transition-all group"
+          >
+            <div class="flex justify-between items-center">
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-[14px] text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{{ svc.name }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ formatDuration(svc.duration_minutes) }}</p>
               </div>
-            </button>
-          </div>
+              <div class="flex items-center gap-2 shrink-0 ml-3">
+                <p class="font-bold text-[15px] text-gray-900">${{ Number(svc.base_price).toFixed(2) }}</p>
+                <svg class="w-4 h-4 text-gray-300 group-hover:text-[var(--color-primary)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
+
+      <!-- No results -->
+      <p v-if="serviceSearch && !filteredCategories.length" class="text-sm text-gray-400 text-center py-6">No se encontraron servicios para "{{ serviceSearch }}"</p>
     </div>
 
     <!-- ===== STEP 2: STYLIST ===== -->
