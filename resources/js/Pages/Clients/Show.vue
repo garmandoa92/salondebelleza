@@ -85,7 +85,7 @@ const loadDiagForApt = async (aptId) => {
   if (diagState.diagnosis.value) {
     diagForm.value = { ...diagState.diagnosis.value }
   } else {
-    diagForm.value = { hair_condition: '', products_used: [], technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '' }
+    diagForm.value = { initial_condition: '', products_used: [], technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '' }
   }
 }
 
@@ -378,10 +378,10 @@ const tabItems = [
 
                       <template v-if="diagState.diagnosis.value && !diagState.editing.value">
                         <div class="grid grid-cols-2 gap-3 text-sm">
-                          <div v-if="diagState.diagnosis.value.hair_condition"><span class="t-label block">Estado cabello</span><span class="t-name">{{ diagState.diagnosis.value.hair_condition }}</span></div>
-                          <div v-if="diagState.diagnosis.value.technique"><span class="t-label block">Tecnica</span><span class="t-name">{{ diagState.diagnosis.value.technique }}</span></div>
+                          <div v-if="diagState.diagnosis.value.initial_condition"><span class="t-label block">Condicion inicial</span><span class="t-name">{{ diagState.diagnosis.value.initial_condition }}</span></div>
+                          <div v-if="diagState.diagnosis.value.technique"><span class="t-label block">Tecnica aplicada</span><span class="t-name">{{ diagState.diagnosis.value.technique }}</span></div>
                           <div v-if="diagState.diagnosis.value.temperature"><span class="t-label block">Temperatura</span><span class="t-name">{{ diagState.diagnosis.value.temperature }}</span></div>
-                          <div v-if="diagState.diagnosis.value.exposure_time"><span class="t-label block">Tiempo</span><span class="t-name">{{ diagState.diagnosis.value.exposure_time }}</span></div>
+                          <div v-if="diagState.diagnosis.value.exposure_time"><span class="t-label block">Duracion procedimiento</span><span class="t-name">{{ diagState.diagnosis.value.exposure_time }}</span></div>
                         </div>
                         <p v-if="diagState.diagnosis.value.result" class="text-sm text-gray-700 mt-2">{{ diagState.diagnosis.value.result }}</p>
                         <p v-if="diagState.diagnosis.value.next_visit_notes" class="text-sm text-green-700 mt-2 italic">"{{ diagState.diagnosis.value.next_visit_notes }}"</p>
@@ -391,12 +391,12 @@ const tabItems = [
                       <template v-else-if="diagState.editing.value">
                         <div class="space-y-2">
                           <div class="grid grid-cols-2 gap-2">
-                            <div><label class="t-label block mb-1">Estado cabello</label><input v-model="diagForm.hair_condition" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Normal, danado, poroso..." /></div>
-                            <div><label class="t-label block mb-1">Tecnica</label><input v-model="diagForm.technique" class="w-full text-sm border rounded-lg px-3 py-1.5" /></div>
-                            <div><label class="t-label block mb-1">Temperatura</label><input v-model="diagForm.temperature" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="230°C" /></div>
-                            <div><label class="t-label block mb-1">Tiempo exposicion</label><input v-model="diagForm.exposure_time" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="45 min" /></div>
+                            <div><label class="t-label block mb-1">Condicion inicial</label><input v-model="diagForm.initial_condition" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Ej: cabello poroso, piel sensible, unas quebradizas..." /></div>
+                            <div><label class="t-label block mb-1">Tecnica aplicada</label><input v-model="diagForm.technique" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Ej: balayage, presion profunda, esmaltado..." /></div>
+                            <div><label class="t-label block mb-1">Temperatura</label><input v-model="diagForm.temperature" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Ej: 230°C, frio/caliente..." /></div>
+                            <div><label class="t-label block mb-1">Duracion procedimiento</label><input v-model="diagForm.exposure_time" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Ej: 45 min, 1h 30min..." /></div>
                           </div>
-                          <div><label class="t-label block mb-1">Resultado</label><textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-3 py-1.5" /></div>
+                          <div><label class="t-label block mb-1">Resultado obtenido</label><textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Describe el resultado del servicio..." /></div>
                           <div><label class="t-label block mb-1">Nota para proxima visita</label><textarea v-model="diagForm.next_visit_notes" rows="2" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Recomendaciones para la proxima vez..." /></div>
                           <div><label class="t-label block mb-1">Notas internas</label><textarea v-model="diagForm.internal_notes" rows="1" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Solo visible para el equipo" /></div>
                           <div class="flex gap-2"><Button size="sm" @click="saveDiag(apt.id)">Guardar</Button><Button variant="outline" size="sm" @click="diagState.editing.value = false">Cancelar</Button></div>

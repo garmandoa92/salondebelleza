@@ -19,7 +19,7 @@ class AppointmentDiagnosisController extends Controller
     public function store(Request $request, Appointment $appointment)
     {
         $data = $request->validate([
-            'hair_condition' => ['nullable', 'string', 'max:100'],
+            'initial_condition' => ['nullable', 'string', 'max:100'],
             'skin_condition' => ['nullable', 'string', 'max:100'],
             'products_used' => ['nullable', 'array'],
             'technique' => ['nullable', 'string', 'max:200'],
@@ -43,7 +43,7 @@ class AppointmentDiagnosisController extends Controller
     public function update(Request $request, Appointment $appointment)
     {
         $data = $request->validate([
-            'hair_condition' => ['nullable', 'string', 'max:100'],
+            'initial_condition' => ['nullable', 'string', 'max:100'],
             'skin_condition' => ['nullable', 'string', 'max:100'],
             'products_used' => ['nullable', 'array'],
             'technique' => ['nullable', 'string', 'max:200'],

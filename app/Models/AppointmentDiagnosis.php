@@ -13,7 +13,7 @@ class AppointmentDiagnosis extends Model
     protected $fillable = [
         'appointment_id',
         'client_id',
-        'hair_condition',
+        'initial_condition',
         'skin_condition',
         'products_used',
         'technique',

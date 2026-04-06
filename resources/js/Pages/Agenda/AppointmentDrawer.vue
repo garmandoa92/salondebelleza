@@ -120,7 +120,7 @@ const prevVisitNotes = ref(null)
 const loadDiag = async () => {
   if (!apt.value?.id) return
   await diagState.load(apt.value.id)
-  diagForm.value = diagState.diagnosis.value ? { ...diagState.diagnosis.value } : { hair_condition: '', technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '', products_used: [] }
+  diagForm.value = diagState.diagnosis.value ? { ...diagState.diagnosis.value } : { initial_condition: '', technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '', products_used: [] }
   // Load previous visit notes
   if (apt.value?.client_id) {
     try {
@@ -266,7 +266,7 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             <p class="text-sm font-semibold text-gray-900 mb-2">Diagnostico</p>
             <template v-if="diagState.diagnosis.value && !diagState.editing.value">
               <div class="rounded-lg p-3 text-sm space-y-1" style="background: #F4F9F7;">
-                <p v-if="diagState.diagnosis.value.hair_condition"><span class="text-gray-500">Cabello:</span> {{ diagState.diagnosis.value.hair_condition }}</p>
+                <p v-if="diagState.diagnosis.value.initial_condition"><span class="text-gray-500">Condicion:</span> {{ diagState.diagnosis.value.initial_condition }}</p>
                 <p v-if="diagState.diagnosis.value.technique"><span class="text-gray-500">Tecnica:</span> {{ diagState.diagnosis.value.technique }}</p>
                 <p v-if="diagState.diagnosis.value.result"><span class="text-gray-500">Resultado:</span> {{ diagState.diagnosis.value.result }}</p>
                 <p v-if="diagState.diagnosis.value.next_visit_notes" class="text-green-700 italic">"{{ diagState.diagnosis.value.next_visit_notes }}"</p>
@@ -276,14 +276,14 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             <template v-else-if="diagState.editing.value">
               <div class="space-y-2">
                 <div class="grid grid-cols-2 gap-2">
-                  <input v-model="diagForm.hair_condition" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Estado cabello" />
-                  <input v-model="diagForm.technique" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Tecnica" />
+                  <input v-model="diagForm.initial_condition" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Condicion inicial" />
+                  <input v-model="diagForm.technique" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Tecnica aplicada" />
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   <input v-model="diagForm.temperature" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Temperatura" />
-                  <input v-model="diagForm.exposure_time" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Tiempo" />
+                  <input v-model="diagForm.exposure_time" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Duracion procedimiento" />
                 </div>
-                <textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-2 py-1.5" placeholder="Resultado" />
+                <textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-2 py-1.5" placeholder="Resultado obtenido" />
                 <textarea v-model="diagForm.next_visit_notes" rows="2" class="w-full text-sm border rounded-lg px-2 py-1.5" placeholder="Nota para proxima visita..." />
                 <div class="flex gap-2">
                   <Button size="sm" @click="saveDiag">Guardar</Button>
