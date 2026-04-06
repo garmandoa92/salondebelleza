@@ -28,6 +28,7 @@ use App\Http\Controllers\Tenant\PackageController;
 use App\Http\Controllers\Tenant\PrintController;
 use App\Http\Controllers\Tenant\AdvanceController;
 use App\Http\Controllers\Tenant\AppointmentPhotoController;
+use App\Http\Controllers\Tenant\AppointmentDiagnosisController;
 use App\Http\Controllers\Tenant\ExportController;
 
 Route::prefix('/salon/{tenant}')->middleware([
@@ -239,6 +240,11 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::put('agenda/appointments/{appointment}/photos/{photo}', [AppointmentPhotoController::class, 'update'])->name('tenant.appointment-photos.update');
         Route::delete('agenda/appointments/{appointment}/photos/{photo}', [AppointmentPhotoController::class, 'destroy'])->name('tenant.appointment-photos.destroy');
         Route::get('clientes/{clientId}/photos', [AppointmentPhotoController::class, 'clientPhotos'])->name('tenant.client-photos');
+
+        // Appointment Diagnosis
+        Route::get('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'show'])->name('tenant.diagnosis.show');
+        Route::post('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'store'])->name('tenant.diagnosis.store');
+        Route::put('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'update'])->name('tenant.diagnosis.update');
 
         // Exports / Excel
         Route::get('exports/sales', [ExportController::class, 'sales'])->name('tenant.exports.sales');

@@ -160,6 +160,7 @@ resources/js/
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
 | 19  | docs/sesion-19-fotos.md       | DONE | Módulo de fotos antes/después | Post MVP |
 | 19b | docs/sesion-19b-garantias.md  | Módulo de garantías           | Post MVP |
+| 19c | docs/sesion-19c-historial-mejorado.md | DONE | Historial con diagnostico y fotos | Post MVP |
 
 ## Modulos implementados
 - **Auth**: registro salon, login central -> redirect a tenant, login tenant con token cross-domain

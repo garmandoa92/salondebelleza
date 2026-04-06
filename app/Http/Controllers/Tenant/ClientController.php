@@ -63,7 +63,7 @@ class ClientController extends Controller
         $client->load('preferredStylist:id,name');
 
         $appointments = Appointment::where('client_id', $client->id)
-            ->with(['service:id,name,base_price', 'stylist:id,name,color'])
+            ->with(['service:id,name,base_price,duration_minutes', 'stylist:id,name,color', 'sale:id,appointment_id,sri_invoice_id,total', 'diagnosis'])
             ->orderBy('starts_at', 'desc')
             ->get();
 

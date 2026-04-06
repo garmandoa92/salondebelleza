@@ -74,4 +74,14 @@ class Appointment extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function diagnosis()
+    {
+        return $this->hasOne(AppointmentDiagnosis::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(AppointmentPhoto::class);
+    }
 }

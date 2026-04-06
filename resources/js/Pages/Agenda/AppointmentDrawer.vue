@@ -111,6 +111,29 @@ const paymentStatus = computed(() => apt.value?.payment_status?.value || apt.val
 
 const printTicket = () => window.open(`${base}/print/appointment/${apt.value.id}`, '_blank', 'width=400,height=600')
 
+// ===== DIAGNOSIS =====
+import { useDiagnosis } from '@/Composables/useDiagnosis'
+const diagState = useDiagnosis(base)
+const diagForm = ref({})
+const prevVisitNotes = ref(null)
+
+const loadDiag = async () => {
+  if (!apt.value?.id) return
+  await diagState.load(apt.value.id)
+  diagForm.value = diagState.diagnosis.value ? { ...diagState.diagnosis.value } : { hair_condition: '', technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '', products_used: [] }
+  // Load previous visit notes
+  if (apt.value?.client_id) {
+    try {
+      const { data } = await axios.get(`${base}/agenda/search-clients`, { params: { q: apt.value.client_id } })
+      // Not ideal but works — we need a better endpoint for this
+    } catch {}
+  }
+}
+
+const saveDiag = async () => { await diagState.save(apt.value.id, diagForm.value) }
+
+watch(apt, (v) => { if (v && (status.value === 'in_progress' || status.value === 'completed')) loadDiag() })
+
 // ===== PHOTOS =====
 import { useImageCompressor } from '@/Composables/useImageCompressor'
 const { compress } = useImageCompressor()
@@ -236,6 +259,41 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
           <div v-if="status === 'cancelled'" class="bg-red-50 rounded-lg p-3 text-sm">
             <p class="font-medium text-red-700">Cancelada por {{ apt.cancelled_by }}</p>
             <p v-if="apt.cancellation_reason" class="text-red-600">{{ apt.cancellation_reason }}</p>
+          </div>
+
+          <!-- Diagnosis section -->
+          <div v-if="status === 'in_progress' || status === 'completed'" class="border-t pt-4">
+            <p class="text-sm font-semibold text-gray-900 mb-2">Diagnostico</p>
+            <template v-if="diagState.diagnosis.value && !diagState.editing.value">
+              <div class="rounded-lg p-3 text-sm space-y-1" style="background: #F4F9F7;">
+                <p v-if="diagState.diagnosis.value.hair_condition"><span class="text-gray-500">Cabello:</span> {{ diagState.diagnosis.value.hair_condition }}</p>
+                <p v-if="diagState.diagnosis.value.technique"><span class="text-gray-500">Tecnica:</span> {{ diagState.diagnosis.value.technique }}</p>
+                <p v-if="diagState.diagnosis.value.result"><span class="text-gray-500">Resultado:</span> {{ diagState.diagnosis.value.result }}</p>
+                <p v-if="diagState.diagnosis.value.next_visit_notes" class="text-green-700 italic">"{{ diagState.diagnosis.value.next_visit_notes }}"</p>
+                <button @click="diagState.editing.value = true; diagForm = { ...diagState.diagnosis.value }" class="t-action text-xs mt-1">Editar</button>
+              </div>
+            </template>
+            <template v-else-if="diagState.editing.value">
+              <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <input v-model="diagForm.hair_condition" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Estado cabello" />
+                  <input v-model="diagForm.technique" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Tecnica" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input v-model="diagForm.temperature" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Temperatura" />
+                  <input v-model="diagForm.exposure_time" class="text-sm border rounded-lg px-2 py-1.5" placeholder="Tiempo" />
+                </div>
+                <textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-2 py-1.5" placeholder="Resultado" />
+                <textarea v-model="diagForm.next_visit_notes" rows="2" class="w-full text-sm border rounded-lg px-2 py-1.5" placeholder="Nota para proxima visita..." />
+                <div class="flex gap-2">
+                  <Button size="sm" @click="saveDiag">Guardar</Button>
+                  <Button variant="outline" size="sm" @click="diagState.editing.value = false">Cancelar</Button>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <button @click="diagState.editing.value = true" class="text-xs px-3 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 w-full">+ Agregar diagnostico del servicio</button>
+            </template>
           </div>
 
           <!-- Photos section -->

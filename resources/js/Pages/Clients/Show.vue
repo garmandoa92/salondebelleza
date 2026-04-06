@@ -57,6 +57,74 @@ const totalPhotos = computed(() => Object.values(clientPhotos.value).reduce((s, 
 const typeBadgeColor = (t) => ({ before: 'bg-amber-100 text-amber-700', after: 'bg-green-100 text-green-700', reference: 'bg-blue-100 text-blue-700', other: 'bg-gray-100 text-gray-600' }[t] || 'bg-gray-100')
 const typePhotoLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF', other: 'OTRA' }[t] || t)
 
+// Historial: grouped by month, expandable
+const expandedApt = ref(null)
+const toggleExpand = (id) => { expandedApt.value = expandedApt.value === id ? null : id }
+
+const groupedByMonth = computed(() => {
+  if (!props.pastAppointments?.length) return []
+  const groups = {}
+  for (const apt of props.pastAppointments) {
+    const d = new Date(apt.starts_at)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })
+    if (!groups[key]) groups[key] = { key, label, apts: [], total: 0 }
+    groups[key].apts.push(apt)
+    groups[key].total += Number(apt.service?.base_price || 0)
+  }
+  return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key))
+})
+
+// Diagnosis inline editing
+import { useDiagnosis } from '@/Composables/useDiagnosis'
+const diagState = useDiagnosis(base)
+const diagForm = ref({})
+
+const loadDiagForApt = async (aptId) => {
+  await diagState.load(aptId)
+  if (diagState.diagnosis.value) {
+    diagForm.value = { ...diagState.diagnosis.value }
+  } else {
+    diagForm.value = { hair_condition: '', products_used: [], technique: '', temperature: '', exposure_time: '', result: '', next_visit_notes: '', internal_notes: '' }
+  }
+}
+
+const saveDiag = async (aptId) => {
+  await diagState.save(aptId, diagForm.value)
+}
+
+watch(expandedApt, (id) => { if (id) loadDiagForApt(id) })
+
+// Upload photo from historial
+const uploadingHistPhoto = ref(false)
+const uploadHistPhoto = async (aptId, type) => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    uploadingHistPhoto.value = true
+    try {
+      const compressed = await compress(file)
+      const fd = new FormData()
+      fd.append('photo', compressed)
+      fd.append('type', type)
+      await axios.post(`${base}/agenda/appointments/${aptId}/photos`, fd)
+      loadClientPhotos()
+    } finally { uploadingHistPhoto.value = false }
+  }
+  input.click()
+}
+
+// Previous visit notes
+const getPrevVisitNotes = (aptId) => {
+  const apts = props.pastAppointments || []
+  const idx = apts.findIndex(a => a.id === aptId)
+  if (idx < 0 || idx >= apts.length - 1) return null
+  return apts[idx + 1]?.diagnosis?.next_visit_notes || null
+}
+
 // Advance modal
 const showAdvanceModal = ref(false)
 const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
@@ -263,45 +331,109 @@ const tabItems = [
           </button>
         </div>
 
-        <!-- Tab: Historial (timeline) -->
-        <Card v-if="activeTab === 'historial'">
-          <CardContent class="pt-4">
-            <div v-if="pastAppointments?.length" class="relative pl-6">
-              <!-- Timeline line -->
-              <div class="absolute left-[9px] top-2 bottom-2 w-px bg-gray-200" />
-              <div v-for="apt in pastAppointments" :key="apt.id" class="relative pb-5 last:pb-0">
-                <!-- Timeline dot -->
-                <div class="absolute -left-6 top-1 w-[18px] h-[18px] rounded-full border-2 border-white flex items-center justify-center"
-                  :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }">
-                  <div class="w-2 h-2 rounded-full bg-white" />
-                </div>
-                <!-- Content -->
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-1 min-w-0">
-                    <p style="font-size:14px; font-weight:600; color:#1A2420;">{{ apt.service?.name }}</p>
-                    <p class="t-meta mt-0.5">{{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — <span class="t-name" style="font-size:12px;">{{ apt.stylist?.name }}</span></p>
-                    <p v-if="apt.notes" class="t-meta mt-1 italic">{{ apt.notes }}</p>
-                    <!-- Photo thumbnails -->
-                    <div v-if="clientPhotos[apt.id]?.length" class="flex gap-1 mt-1.5">
-                      <img v-for="p in clientPhotos[apt.id].slice(0, 4)" :key="p.id"
-                        :src="`/storage/${p.thumbnail_path || p.photo_path}`"
-                        class="w-9 h-9 rounded object-cover cursor-pointer hover:opacity-80"
-                        @click="lightboxPhoto = p" />
-                      <span v-if="clientPhotos[apt.id].length > 4" class="w-9 h-9 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-500">+{{ clientPhotos[apt.id].length - 4 }}</span>
+        <!-- Tab: Historial (grouped by month, expandable) -->
+        <div v-if="activeTab === 'historial'" class="space-y-4">
+          <template v-if="groupedByMonth.length">
+            <div v-for="group in groupedByMonth" :key="group.key">
+              <!-- Month header -->
+              <div class="flex items-center justify-between px-4 py-2 rounded-lg mb-2" style="background: #F4F9F7;">
+                <span class="text-sm font-semibold text-gray-800 capitalize">{{ group.label }}</span>
+                <span class="t-meta">{{ group.apts.length }} visita{{ group.apts.length > 1 ? 's' : '' }} · ${{ group.total.toFixed(2) }}</span>
+              </div>
+
+              <!-- Appointments -->
+              <Card v-for="apt in group.apts" :key="apt.id" class="mb-2">
+                <CardContent class="pt-3 pb-3">
+                  <!-- Collapsed row -->
+                  <div class="flex items-start gap-3 cursor-pointer" @click="toggleExpand(apt.id)">
+                    <div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" :style="{ backgroundColor: apt.stylist?.color || '#94a3b8' }" />
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span style="font-size:14px; font-weight:600; color:#1A2420;">{{ apt.service?.name }}</span>
+                        <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">{{ statusLabels[apt.status?.value || apt.status] }}</span>
+                      </div>
+                      <p class="t-meta mt-0.5">{{ formatDate(apt.starts_at) }} {{ formatTime(apt.starts_at) }} — {{ apt.stylist?.name }} · {{ apt.service?.duration_minutes || 30 }}min</p>
+                      <div class="flex items-center gap-2 mt-1">
+                        <span v-if="clientPhotos[apt.id]?.length" class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">📷 {{ clientPhotos[apt.id].length }} fotos</span>
+                        <span v-if="apt.diagnosis" class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600">📋 Con diagnostico</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                      <p class="t-money" style="font-size:15px;">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
+                      <svg :class="['w-4 h-4 text-gray-400 transition-transform', expandedApt === apt.id && 'rotate-180']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 shrink-0">
-                    <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full', statusColors[apt.status?.value || apt.status]]">
-                      {{ statusLabels[apt.status?.value || apt.status] }}
-                    </span>
-                    <p class="t-money" style="font-size:15px;">${{ Number(apt.service?.base_price || 0).toFixed(2) }}</p>
+
+                  <!-- Expanded detail -->
+                  <div v-if="expandedApt === apt.id" class="mt-4 space-y-4 border-t pt-4">
+                    <!-- Previous visit notes banner -->
+                    <div v-if="getPrevVisitNotes(apt.id)" class="rounded-lg p-3" style="background: #E8F4F0;">
+                      <p class="text-xs font-semibold text-gray-700 mb-1">📋 Nota de la visita anterior</p>
+                      <p class="text-sm text-gray-600 italic">"{{ getPrevVisitNotes(apt.id) }}"</p>
+                    </div>
+
+                    <!-- Diagnosis section -->
+                    <div class="rounded-lg p-4" style="background: #F4F9F7; border-left: 3px solid var(--color-primary);">
+                      <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Diagnostico y notas</p>
+
+                      <template v-if="diagState.diagnosis.value && !diagState.editing.value">
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                          <div v-if="diagState.diagnosis.value.hair_condition"><span class="t-label block">Estado cabello</span><span class="t-name">{{ diagState.diagnosis.value.hair_condition }}</span></div>
+                          <div v-if="diagState.diagnosis.value.technique"><span class="t-label block">Tecnica</span><span class="t-name">{{ diagState.diagnosis.value.technique }}</span></div>
+                          <div v-if="diagState.diagnosis.value.temperature"><span class="t-label block">Temperatura</span><span class="t-name">{{ diagState.diagnosis.value.temperature }}</span></div>
+                          <div v-if="diagState.diagnosis.value.exposure_time"><span class="t-label block">Tiempo</span><span class="t-name">{{ diagState.diagnosis.value.exposure_time }}</span></div>
+                        </div>
+                        <p v-if="diagState.diagnosis.value.result" class="text-sm text-gray-700 mt-2">{{ diagState.diagnosis.value.result }}</p>
+                        <p v-if="diagState.diagnosis.value.next_visit_notes" class="text-sm text-green-700 mt-2 italic">"{{ diagState.diagnosis.value.next_visit_notes }}"</p>
+                        <button @click="diagState.editing.value = true; diagForm = { ...diagState.diagnosis.value }" class="t-action text-xs mt-2">Editar</button>
+                      </template>
+
+                      <template v-else-if="diagState.editing.value">
+                        <div class="space-y-2">
+                          <div class="grid grid-cols-2 gap-2">
+                            <div><label class="t-label block mb-1">Estado cabello</label><input v-model="diagForm.hair_condition" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Normal, danado, poroso..." /></div>
+                            <div><label class="t-label block mb-1">Tecnica</label><input v-model="diagForm.technique" class="w-full text-sm border rounded-lg px-3 py-1.5" /></div>
+                            <div><label class="t-label block mb-1">Temperatura</label><input v-model="diagForm.temperature" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="230°C" /></div>
+                            <div><label class="t-label block mb-1">Tiempo exposicion</label><input v-model="diagForm.exposure_time" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="45 min" /></div>
+                          </div>
+                          <div><label class="t-label block mb-1">Resultado</label><textarea v-model="diagForm.result" rows="2" class="w-full text-sm border rounded-lg px-3 py-1.5" /></div>
+                          <div><label class="t-label block mb-1">Nota para proxima visita</label><textarea v-model="diagForm.next_visit_notes" rows="2" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Recomendaciones para la proxima vez..." /></div>
+                          <div><label class="t-label block mb-1">Notas internas</label><textarea v-model="diagForm.internal_notes" rows="1" class="w-full text-sm border rounded-lg px-3 py-1.5" placeholder="Solo visible para el equipo" /></div>
+                          <div class="flex gap-2"><Button size="sm" @click="saveDiag(apt.id)">Guardar</Button><Button variant="outline" size="sm" @click="diagState.editing.value = false">Cancelar</Button></div>
+                        </div>
+                      </template>
+
+                      <template v-else>
+                        <p class="text-sm text-gray-400">Sin diagnostico registrado</p>
+                        <button @click="diagState.editing.value = true" class="t-action text-xs mt-1">+ Agregar diagnostico</button>
+                      </template>
+                    </div>
+
+                    <!-- Photos section -->
+                    <div>
+                      <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Fotos de la visita</p>
+                      <div class="flex gap-2 flex-wrap items-start">
+                        <div v-for="p in (clientPhotos[apt.id] || [])" :key="p.id" class="relative">
+                          <img :src="`/storage/${p.thumbnail_path || p.photo_path}`" class="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90" @click="lightboxPhoto = p" />
+                          <span :class="[typeBadgeColor(p.type), 'absolute top-1 left-1 text-[8px] font-bold px-1 py-0.5 rounded']">{{ typePhotoLabel(p.type) }}</span>
+                        </div>
+                        <button @click="uploadHistPhoto(apt.id, 'before')" :disabled="uploadingHistPhoto" class="w-20 h-20 rounded-lg border-2 border-dashed border-amber-300 text-amber-600 flex flex-col items-center justify-center text-[10px] font-medium hover:bg-amber-50">📷<span>Antes</span></button>
+                        <button @click="uploadHistPhoto(apt.id, 'after')" :disabled="uploadingHistPhoto" class="w-20 h-20 rounded-lg border-2 border-dashed border-green-300 text-green-600 flex flex-col items-center justify-center text-[10px] font-medium hover:bg-green-50">📷<span>Despues</span></button>
+                      </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-2 pt-2 border-t">
+                      <Button v-if="apt.sale?.sri_invoice_id" variant="ghost" size="sm" class="text-xs" @click="window.open(`${base}/print/invoice/${apt.sale.sri_invoice_id}`, '_blank')">Ver factura</Button>
+                      <Button v-if="apt.sale" variant="ghost" size="sm" class="text-xs" @click="window.open(`${base}/print/sale/${apt.sale.id}`, '_blank')">Reimprimir recibo</Button>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
-            <p v-else class="text-sm text-gray-400 text-center py-8">Sin historial de citas</p>
-          </CardContent>
-        </Card>
+          </template>
+          <p v-else class="text-sm text-gray-400 text-center py-8">Sin historial de citas</p>
+        </div>
 
         <!-- Tab: Compras -->
         <Card v-if="activeTab === 'compras'">
