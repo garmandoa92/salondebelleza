@@ -79,6 +79,49 @@ const submitAdvance = async () => {
   } finally { savingAdvance.value = false }
 }
 
+// Warranty on complete
+const showWarrantyPrompt = ref(false)
+const warrantyDays = ref(30)
+const warrantyDesc = ref('')
+const addWarranty = ref(true)
+const completing = ref(false)
+
+const startComplete = () => {
+  // Pre-fill from service config
+  warrantyDays.value = apt.value?.service?.warranty_days || 30
+  warrantyDesc.value = apt.value?.service?.warranty_description || ''
+  addWarranty.value = !!apt.value?.service?.has_warranty
+  showWarrantyPrompt.value = true
+}
+
+const confirmComplete = async () => {
+  completing.value = true
+  try {
+    await axios.post(`${base}/agenda/appointments/${apt.value.id}/complete`, {
+      add_warranty: addWarranty.value,
+      warranty_days: addWarranty.value ? warrantyDays.value : null,
+      warranty_description: addWarranty.value ? warrantyDesc.value : null,
+    }, { headers: { Accept: 'application/json' } })
+    showWarrantyPrompt.value = false
+    const { data } = await axios.get(`${base}/agenda/appointments/${apt.value.id}`)
+    apt.value = data
+    emit('updated')
+  } finally { completing.value = false }
+}
+
+// Warranty check for existing warranty
+const existingWarranty = ref(null)
+const checkWarranty = async () => {
+  if (!apt.value?.client_id || !apt.value?.service_id) return
+  try {
+    const { data } = await axios.get(`${base}/warranties/check`, {
+      params: { client_id: apt.value.client_id, service_id: apt.value.service_id }
+    })
+    existingWarranty.value = data.has_warranty ? data.warranty : null
+  } catch {}
+}
+watch(apt, (v) => { if (v) checkWarranty() })
+
 const completingPackage = ref(false)
 const completePackageSession = async () => {
   completingPackage.value = true
@@ -349,6 +392,16 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             </div>
           </div>
 
+          <!-- Existing warranty banner -->
+          <div v-if="existingWarranty && (status === 'pending' || status === 'confirmed')" class="rounded-lg p-3" style="background: #FFF8E1; border: 0.5px solid #F9A825; border-left: 3px solid #F9A825;">
+            <p class="text-sm font-semibold text-amber-800">Garantia activa</p>
+            <p class="text-xs text-amber-700 mt-0.5">
+              {{ existingWarranty.service?.name }} · vence {{ new Date(existingWarranty.expires_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) }}
+              ({{ Math.max(0, Math.ceil((new Date(existingWarranty.expires_at) - new Date()) / 86400000)) }} dias)
+            </p>
+            <p v-if="existingWarranty.notes" class="text-xs text-amber-600 mt-1">{{ existingWarranty.notes }}</p>
+          </div>
+
           <!-- Advance badge -->
           <div v-if="apt.advances?.length" class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
             <p class="font-medium text-green-800">
@@ -377,8 +430,8 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
                 <p class="text-green-600 text-xs">Al completar se descuenta automaticamente</p>
               </div>
               <div class="flex gap-2">
-                <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="completingPackage" @click="completePackageSession">
-                  {{ completingPackage ? 'Completando...' : 'Completar servicio' }}
+                <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="completing || completingPackage" @click="isPackageSession ? completePackageSession() : startComplete()">
+                  {{ completing || completingPackage ? 'Completando...' : 'Completar servicio' }}
                 </Button>
                 <Button v-if="!isPackageSession" class="flex-1" @click="openCheckout">Cobrar</Button>
               </div>
@@ -412,6 +465,51 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
               @click="showAdvanceModal = true">
               + Registrar anticipo
             </Button>
+          </div>
+
+          <!-- Warranty prompt on complete -->
+          <div v-if="showWarrantyPrompt" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" @click.self="showWarrantyPrompt = false">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-5 space-y-4">
+              <h3 class="text-lg font-bold">Completar servicio</h3>
+              <p class="text-sm text-gray-500">{{ apt.service?.name }} — {{ apt.client?.first_name }} {{ apt.client?.last_name }}</p>
+
+              <div class="rounded-lg p-4 space-y-3" style="background: #FFF8E1; border-left: 3px solid #F9A825;">
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" v-model="addWarranty" class="rounded border-gray-300" />
+                  <div>
+                    <span class="text-sm font-semibold text-amber-800">Agregar garantia al servicio</span>
+                    <p class="text-xs text-amber-600">El cliente podra volver sin costo dentro del plazo</p>
+                  </div>
+                </label>
+
+                <template v-if="addWarranty">
+                  <div class="space-y-2">
+                    <label class="text-xs font-medium text-amber-700">Dias de garantia</label>
+                    <div class="flex items-center gap-2">
+                      <input v-model="warrantyDays" type="number" min="1" max="365" class="w-20 text-sm border rounded-lg px-2 py-1.5" />
+                      <span class="text-xs text-gray-500">dias</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                      <button v-for="d in [7, 15, 30, 60, 90]" :key="d" type="button" @click="warrantyDays = d"
+                        :class="['text-[10px] px-2 py-1 rounded-full border transition', warrantyDays == d ? 'border-amber-500 bg-amber-100 text-amber-700' : 'border-gray-200 text-gray-500']">
+                        {{ d }}d
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium text-amber-700">Que cubre (opcional)</label>
+                    <input v-model="warrantyDesc" class="w-full text-sm border rounded-lg px-2 py-1.5 mt-1" placeholder="Ej: retoques si no quedo uniforme" />
+                  </div>
+                </template>
+              </div>
+
+              <div class="flex gap-2">
+                <Button variant="outline" class="flex-1" @click="showWarrantyPrompt = false">Cancelar</Button>
+                <Button class="flex-1 bg-green-600 hover:bg-green-700" :disabled="completing" @click="confirmComplete">
+                  {{ completing ? 'Completando...' : 'Completar servicio' }}
+                </Button>
+              </div>
+            </div>
           </div>
 
           <!-- Advance modal -->

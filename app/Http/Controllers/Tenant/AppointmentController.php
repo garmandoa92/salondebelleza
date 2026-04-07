@@ -95,7 +95,7 @@ class AppointmentController extends Controller
         $appointment->load([
             'client:id,first_name,last_name,phone,email,allergies,tags,visit_count,last_visit_at,total_spent,balance',
             'stylist:id,name,color,phone',
-            'service:id,name,base_price,duration_minutes,service_category_id',
+            'service:id,name,base_price,duration_minutes,service_category_id,has_warranty,warranty_days,warranty_description',
             'service.category:id,name,color',
             'creator:id,name',
         ]);
@@ -171,11 +171,29 @@ class AppointmentController extends Controller
             $appointment->update(['payment_status' => 'pending']);
         }
 
-        // Create warranty if service has one
+        // Create warranty — always if requested from frontend, or auto if service has it
         $appointment->load('service');
-        if ($appointment->service?->has_warranty && $appointment->service?->warranty_days && !$appointment->is_warranty) {
-            $warrantyService = app(\App\Services\WarrantyService::class);
-            $warrantyService->createFromAppointment($appointment);
+        if (!$appointment->is_warranty) {
+            $addWarranty = request()->input('add_warranty');
+            $wDays = (int) request()->input('warranty_days');
+            $wDesc = request()->input('warranty_description');
+
+            if ($addWarranty && $wDays > 0) {
+                // Use custom days from the prompt
+                \App\Models\AppointmentWarranty::create([
+                    'appointment_id' => $appointment->id,
+                    'client_id' => $appointment->client_id,
+                    'service_id' => $appointment->service_id,
+                    'issued_at' => now(),
+                    'expires_at' => now()->addDays($wDays),
+                    'status' => 'active',
+                    'notes' => $wDesc,
+                ]);
+            } elseif ($addWarranty === null && $appointment->service?->has_warranty && $appointment->service?->warranty_days) {
+                // Auto-create from service config (non-frontend calls like dashboard buttons)
+                $warrantyService = app(\App\Services\WarrantyService::class);
+                $warrantyService->createFromAppointment($appointment);
+            }
         }
 
         // If this is a warranty visit, mark the warranty as used
