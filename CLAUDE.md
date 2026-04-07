@@ -118,6 +118,8 @@ resources/js/
 - No enviar XML sin validar estructura primero
 - No asumir respuesta del SRI en menos de 30 segundos → timeout explícito
 - No perder el XML firmado → guardar en DB antes de enviar al SRI
+- No llamar al WSDL del SRI sin antes validar el dígito verificador (módulo 11) localmente
+- No cachear consultas SRI sin TTL → siempre 86400 (24h), la factura no cambia
 
 ### Multitenancy
 - No acceder a modelos tenant desde contexto central sin inicializar tenancy
@@ -161,6 +163,10 @@ resources/js/
 | 19  | docs/sesion-19-fotos.md       | DONE | Módulo de fotos antes/después | Post MVP |
 | 19b | docs/sesion-19b-garantias.md  | DONE | Módulo de garantías           | Post MVP |
 | 19c | docs/sesion-19c-historial-mejorado.md | DONE | Historial con diagnostico y fotos | Post MVP |
+| 20 | docs/sesion-20-gastos-ecuador.md | DONE | Módulo gastos y P&L Ecuador | Post MVP |
+| 20b | docs/sesion-20b-autocomplete-sri.md | DONE | Autocomplete SRI clave de acceso | Post MVP |
+| 24  | docs/sesion-24-ficha-salud.md | DONE | Ficha de salud del cliente | Post MVP |
+| 24b | docs/sesion-24b-nota-sesion.md | DONE | Nota de sesion con mapa corporal | Post MVP |
 
 ## Modulos implementados
 - **Auth**: registro salon, login central -> redirect a tenant, login tenant con token cross-domain
@@ -185,11 +191,14 @@ resources/js/
 - **Reportes Excel**: maatwebsite/excel, 7 exports (ventas, P&L, citas, clientes, comisiones, inventario, flujo caja) con hojas multiples y estilos
 - **Fotos Antes/Despues**: AppointmentPhoto model, subida con compresion, thumbnails GD, lightbox, tab Fotos en ficha cliente, foto perfil cliente
 - **Garantias**: AppointmentWarranty model, config por servicio (dias + descripcion), creacion auto al completar cita, tab Garantias en ficha cliente, check en modal cita
+- **Gastos y P&L**: ExpenseCategory + Expense models, CRUD gastos con categorias personalizables, factura SRI proveedor, retencion en la fuente, gastos recurrentes (job mensual), P&L mensual con IVA real desde SaleItems, export Excel 3 hojas, widget P&L en Dashboard, autocomplete SRI desde clave de acceso 49 dígitos (decodificación local + consulta SOAP + cache 24h)
+- **Ficha de Salud**: ClientHealthProfile con alergias (tags), condiciones medicas, medicamentos, contraindicaciones, mapa corporal SVG interactivo (frontal+dorsal) con zonas clickeables y notas, slider presion 1-5, preferencias personales, notas terapeuta, alerta pre-cita obligatoria con confirmacion registrada, badge ficha desactualizada (+6 meses), job WhatsApp recordatorio semanal
+- **Nota de Sesion**: AppointmentSessionNote con mapa corporal 3 estados (trabajado/tension/evitado), zonas heredadas de ficha salud (rojo punteado, no editables), tecnicas aplicadas (15 predefinidas + custom), productos usados, duracion real, nivel tension, observaciones privadas, recomendacion proxima sesion, recomendacion cliente con WhatsApp automatico, boton en AppointmentDrawer, eager load en historial
 
 <!-- MEMORY:START -->
 # salondebelleza
 
-_Last updated: 2026-04-06 | 0 active memories, 0 total_
+_Last updated: 2026-04-07 | 0 active memories, 0 total_
 
 _For deeper context, use memory_search, memory_related, or memory_ask tools._
 <!-- MEMORY:END -->

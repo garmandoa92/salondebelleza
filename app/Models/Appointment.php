@@ -86,4 +86,14 @@ class Appointment extends Model
     {
         return $this->hasMany(AppointmentPhoto::class);
     }
+
+    public function healthConfirmations()
+    {
+        return $this->hasMany(AppointmentHealthConfirmation::class);
+    }
+
+    public function sessionNote()
+    {
+        return $this->hasOne(AppointmentSessionNote::class);
+    }
 }

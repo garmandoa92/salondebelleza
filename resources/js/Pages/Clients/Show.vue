@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import HealthProfileTab from './Partials/HealthProfileTab.vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -206,6 +207,7 @@ const tabItems = [
   { key: 'paquetes', label: 'Paquetes', count: () => clientPackages.value.length },
   { key: 'fotos', label: 'Fotos', count: () => totalPhotos.value },
   { key: 'garantias', label: 'Garantias', count: () => warranties.value.length },
+  { key: 'salud', label: 'Ficha Salud', count: () => 0 },
   { key: 'futuras', label: 'Futuras', count: () => props.futureAppointments?.length || 0 },
 ]
 </script>
@@ -700,6 +702,13 @@ const tabItems = [
               </div>
             </div>
             <p v-else class="text-sm text-gray-400 text-center py-8">Sin garantias registradas</p>
+          </CardContent>
+        </Card>
+
+        <!-- Tab: Ficha Salud -->
+        <Card v-if="activeTab === 'salud'">
+          <CardContent class="pt-4">
+            <HealthProfileTab :clientId="client.id" />
           </CardContent>
         </Card>
 

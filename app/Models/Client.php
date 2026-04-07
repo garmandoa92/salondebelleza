@@ -72,4 +72,9 @@ class Client extends Model
     {
         return $this->hasMany(ClientAdvance::class);
     }
+
+    public function healthProfile()
+    {
+        return $this->hasOne(ClientHealthProfile::class);
+    }
 }

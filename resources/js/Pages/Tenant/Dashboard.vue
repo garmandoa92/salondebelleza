@@ -15,6 +15,7 @@ const props = defineProps({
   month: Object,
   alerts: Object,
   pending_advances: Object,
+  pl: Object,
 })
 
 const page = usePage()
@@ -240,6 +241,41 @@ const currentMonth = new Date().toLocaleDateString('es-EC', { month: 'long', yea
               <Link :href="`${base}/reportes`" class="text-sm font-medium hover:underline flex items-center gap-1" style="color: var(--color-primary);">
                 ↗ Ver reporte completo del mes
               </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- P&L Widget -->
+        <Card v-if="pl && pl.ingresos_netos_base !== undefined">
+          <CardHeader class="pb-2">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-base font-medium">Resultados del mes</CardTitle>
+              <Link :href="`${base}/gastos`" class="text-xs hover:underline" style="color: var(--color-primary);">Ver detalle &rarr;</Link>
+            </div>
+          </CardHeader>
+          <CardContent class="space-y-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Ingresos netos</span>
+              <span class="font-medium text-gray-800">${{ Number(pl.ingresos_netos_base || 0).toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Total gastos</span>
+              <span class="font-medium text-gray-800">-${{ Number(pl.total_gastos || 0).toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Comisiones estilistas</span>
+              <span class="font-medium text-gray-800">-${{ Number(pl.comisiones || 0).toFixed(2) }}</span>
+            </div>
+            <div class="border-t border-gray-100 pt-3 flex justify-between">
+              <span class="font-semibold text-gray-700">Utilidad operacional</span>
+              <span class="font-bold text-lg" :class="(pl.utilidad_operacional || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                ${{ Number(pl.utilidad_operacional || 0).toFixed(2) }}
+              </span>
+            </div>
+            <div v-if="(pl.iva_neto_sri || 0) > 0"
+              class="mt-2 p-2 bg-blue-50 rounded-lg flex items-center gap-2 text-xs text-blue-700">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              IVA a declarar al SRI: <strong>${{ Number(pl.iva_neto_sri || 0).toFixed(2) }}</strong>
             </div>
           </CardContent>
         </Card>

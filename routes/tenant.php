@@ -31,6 +31,10 @@ use App\Http\Controllers\Tenant\AppointmentPhotoController;
 use App\Http\Controllers\Tenant\AppointmentDiagnosisController;
 use App\Http\Controllers\Tenant\WarrantyController;
 use App\Http\Controllers\Tenant\ExportController;
+use App\Http\Controllers\Tenant\ExpenseController;
+use App\Http\Controllers\Tenant\ExpenseCategoryController;
+use App\Http\Controllers\Tenant\ClientHealthProfileController;
+use App\Http\Controllers\Tenant\SessionNoteController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -253,6 +257,30 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('warranties/expiring', [WarrantyController::class, 'expiring'])->name('tenant.warranties.expiring');
         Route::get('warranties/client/{clientId}', [WarrantyController::class, 'clientWarranties'])->name('tenant.warranties.client');
         Route::post('warranties/{warranty}/void', [WarrantyController::class, 'void'])->name('tenant.warranties.void');
+
+        // Client Health Profile
+        Route::get('clientes/{client}/ficha-salud', [ClientHealthProfileController::class, 'show'])->name('tenant.health-profile.show');
+        Route::put('clientes/{client}/ficha-salud', [ClientHealthProfileController::class, 'update'])->name('tenant.health-profile.update');
+        Route::get('citas/{appointment}/alerta-salud', [ClientHealthProfileController::class, 'appointmentAlert'])->name('tenant.appointments.health-alert');
+        Route::post('citas/{appointment}/confirmar-ficha', [ClientHealthProfileController::class, 'confirmReading'])->name('tenant.appointments.confirm-health');
+
+        // Session Notes
+        Route::get('citas/{appointment}/nota-sesion', [SessionNoteController::class, 'show'])->name('tenant.session-note.show');
+        Route::post('citas/{appointment}/nota-sesion', [SessionNoteController::class, 'save'])->name('tenant.session-note.save');
+
+        // Gastos / Expenses (specific routes BEFORE parameterized ones)
+        Route::get('gastos/api/pl', [ExpenseController::class, 'pl'])->name('tenant.expenses.pl');
+        Route::get('gastos/consultar-sri', [ExpenseController::class, 'querySriInvoice'])->name('tenant.expenses.query-sri');
+        Route::get('gastos/exportar', [ExpenseController::class, 'export'])->name('tenant.expenses.export');
+        Route::get('gastos/categorias', [ExpenseCategoryController::class, 'index'])->name('tenant.expense-categories.index');
+        Route::post('gastos/categorias', [ExpenseCategoryController::class, 'store'])->name('tenant.expense-categories.store');
+        Route::put('gastos/categorias/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->name('tenant.expense-categories.update');
+        Route::delete('gastos/categorias/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->name('tenant.expense-categories.destroy');
+        Route::get('gastos', [ExpenseController::class, 'index'])->name('tenant.expenses.index');
+        Route::post('gastos', [ExpenseController::class, 'store'])->name('tenant.expenses.store');
+        Route::put('gastos/{expense}', [ExpenseController::class, 'update'])->name('tenant.expenses.update');
+        Route::delete('gastos/{expense}', [ExpenseController::class, 'destroy'])->name('tenant.expenses.destroy');
+        Route::get('gastos/{expense}/comprobante', [ExpenseController::class, 'downloadReceipt'])->name('tenant.expenses.receipt');
 
         // Exports / Excel
         Route::get('exports/sales', [ExportController::class, 'sales'])->name('tenant.exports.sales');

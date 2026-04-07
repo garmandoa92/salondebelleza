@@ -60,10 +60,10 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
-        $client->load('preferredStylist:id,name');
+        $client->load(['preferredStylist:id,name', 'healthProfile']);
 
         $appointments = Appointment::where('client_id', $client->id)
-            ->with(['service:id,name,base_price,duration_minutes', 'stylist:id,name,color', 'sale:id,appointment_id,sri_invoice_id,total', 'diagnosis'])
+            ->with(['service:id,name,base_price,duration_minutes', 'stylist:id,name,color', 'sale:id,appointment_id,sri_invoice_id,total', 'diagnosis', 'sessionNote'])
             ->orderBy('starts_at', 'desc')
             ->get();
 

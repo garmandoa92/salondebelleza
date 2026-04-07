@@ -9,7 +9,7 @@ class ClientService
 {
     public function getFiltered(Request $request)
     {
-        $query = Client::with('preferredStylist:id,name')
+        $query = Client::with(['preferredStylist:id,name', 'healthProfile'])
             ->withCount('appointments');
 
         if ($search = $request->search) {

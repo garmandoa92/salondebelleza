@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SriInvoice;
 use App\Models\Stylist;
+use App\Services\ExpenseService;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
@@ -95,6 +96,14 @@ class DashboardController extends Controller
             $q->where('last_visit_at', '<', now()->subDays(60))->orWhereNull('last_visit_at');
         })->where('is_active', true)->count();
 
+        // P&L del mes actual
+        $pl = [];
+        try {
+            $pl = app(ExpenseService::class)->getProfitAndLoss(now()->year, now()->month);
+        } catch (\Throwable $e) {
+            // Table may not exist yet
+        }
+
         // Pending advances
         $pendingAdvances = \App\Models\ClientAdvance::where('status', 'pending')
             ->with(['client:id,first_name,last_name', 'appointment:id,starts_at'])
@@ -132,6 +141,7 @@ class DashboardController extends Controller
                 'total' => round((float) $pendingAdvancesTotal, 2),
                 'items' => $pendingAdvances,
             ],
+            'pl' => $pl,
         ]);
     }
 }

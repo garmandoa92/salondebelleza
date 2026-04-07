@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import axios from 'axios'
+import AppointmentHealthAlert from '@/Components/AppointmentHealthAlert.vue'
+import SessionNoteDrawer from '@/Components/SessionNoteDrawer.vue'
 
 const props = defineProps({
   appointmentId: String,
@@ -55,6 +57,7 @@ const openCheckout = () => {
 
 // Advance modal
 const showAdvanceModal = ref(false)
+const showSessionNote = ref(false)
 const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
 const savingAdvance = ref(false)
 
@@ -256,6 +259,9 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             </div>
           </div>
 
+          <!-- Health Alert -->
+          <AppointmentHealthAlert :appointmentId="apt.id" />
+
           <!-- Date/Time -->
           <div class="text-sm text-gray-600">
             <p class="capitalize">{{ formatDate(apt.starts_at) }}</p>
@@ -452,6 +458,15 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
               <p class="text-sm text-center text-gray-400">Cita {{ statusLabels[status]?.toLowerCase() }}</p>
             </template>
 
+            <!-- Session note -->
+            <Button v-if="status === 'completed' || status === 'in_progress'"
+              variant="outline" class="w-full"
+              :class="apt.session_note ? 'text-green-600 border-green-300' : 'text-[var(--color-primary)] border-[var(--color-primary)]'"
+              @click="showSessionNote = true">
+              {{ apt.session_note ? 'Ver nota de sesion' : 'Registrar nota de sesion' }}
+              <span v-if="apt.session_note" class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Completada</span>
+            </Button>
+
             <!-- Print ticket (always visible except cancelled/no_show) -->
             <Button v-if="status !== 'cancelled' && status !== 'no_show'"
               variant="outline" class="w-full text-gray-600 border-gray-300"
@@ -573,6 +588,16 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
       </div>
     </div>
   </Transition>
+
+  <!-- Session Note Drawer -->
+  <SessionNoteDrawer
+    :open="showSessionNote"
+    :appointmentId="apt?.id"
+    :clientName="apt ? (apt.client?.first_name + ' ' + apt.client?.last_name) : ''"
+    :serviceName="apt?.service?.name || ''"
+    @close="showSessionNote = false"
+    @saved="loadAppointment(apt?.id)"
+  />
 </template>
 
 <style scoped>

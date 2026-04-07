@@ -98,6 +98,7 @@ class AppointmentController extends Controller
             'service:id,name,base_price,duration_minutes,service_category_id,has_warranty,warranty_days,warranty_description',
             'service.category:id,name,color',
             'creator:id,name',
+            'sessionNote',
         ]);
 
         $appointment->setAttribute('advances', \App\Models\ClientAdvance::where('appointment_id', $appointment->id)->get());
