@@ -458,14 +458,15 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
               <p class="text-sm text-center text-gray-400">Cita {{ statusLabels[status]?.toLowerCase() }}</p>
             </template>
 
-            <!-- Session note -->
-            <Button v-if="status === 'completed' || status === 'in_progress'"
-              variant="outline" class="w-full"
-              :class="apt.session_note ? 'text-green-600 border-green-300' : 'text-[var(--color-primary)] border-[var(--color-primary)]'"
-              @click="showSessionNote = true">
-              {{ apt.session_note ? 'Ver nota de sesion' : 'Registrar nota de sesion' }}
-              <span v-if="apt.session_note" class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Completada</span>
-            </Button>
+            <!-- Detail page with session note -->
+            <a v-if="status === 'completed' || status === 'in_progress'"
+              :href="`${base}/citas/${apt.id}`"
+              class="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm border transition-colors"
+              :class="apt.session_note ? 'border-green-300 text-green-600 hover:bg-green-50' : 'border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-emerald-50'">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Ver detalle completo y nota de sesion
+              <span v-if="apt.session_note" class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Nota completada</span>
+            </a>
 
             <!-- Print ticket (always visible except cancelled/no_show) -->
             <Button v-if="status !== 'cancelled' && status !== 'no_show'"

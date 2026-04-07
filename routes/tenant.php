@@ -35,6 +35,7 @@ use App\Http\Controllers\Tenant\ExpenseController;
 use App\Http\Controllers\Tenant\ExpenseCategoryController;
 use App\Http\Controllers\Tenant\ClientHealthProfileController;
 use App\Http\Controllers\Tenant\SessionNoteController;
+use App\Http\Controllers\Tenant\AppointmentDetailController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -261,6 +262,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         // Client Health Profile
         Route::get('clientes/{client}/ficha-salud', [ClientHealthProfileController::class, 'show'])->name('tenant.health-profile.show');
         Route::put('clientes/{client}/ficha-salud', [ClientHealthProfileController::class, 'update'])->name('tenant.health-profile.update');
+        Route::get('citas/{appointment}', [AppointmentDetailController::class, 'show'])->name('tenant.appointments.detail');
         Route::get('citas/{appointment}/alerta-salud', [ClientHealthProfileController::class, 'appointmentAlert'])->name('tenant.appointments.health-alert');
         Route::post('citas/{appointment}/confirmar-ficha', [ClientHealthProfileController::class, 'confirmReading'])->name('tenant.appointments.confirm-health');
 
