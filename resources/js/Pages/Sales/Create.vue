@@ -487,8 +487,8 @@ onMounted(() => {
                       </div>
                     </div>
                   </td>
-                  <td class="py-3"><Input v-model="item.quantity" type="number" min="0.01" step="1" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
-                  <td class="py-3"><Input v-model="item.unit_price" type="number" step="0.01" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
+                  <td class="py-3"><Input v-model="item.quantity" type="number" min="0.01" step="1" class="h-8 text-xs text-center text-gray-900" @input="updateItemSubtotal(item)" /></td>
+                  <td class="py-3"><Input v-model="item.unit_price" type="number" step="0.01" class="h-8 text-xs text-center text-gray-900" @input="updateItemSubtotal(item)" /></td>
                   <td class="py-3 text-right font-semibold">
                     <template v-if="warrantyItemId && item.reference_id === warrantyItemId && item.type === 'service'">
                       <span class="line-through text-gray-400 text-xs mr-1">${{ Number(item.subtotal).toFixed(2) }}</span>
