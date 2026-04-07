@@ -29,6 +29,7 @@ use App\Http\Controllers\Tenant\PrintController;
 use App\Http\Controllers\Tenant\AdvanceController;
 use App\Http\Controllers\Tenant\AppointmentPhotoController;
 use App\Http\Controllers\Tenant\AppointmentDiagnosisController;
+use App\Http\Controllers\Tenant\WarrantyController;
 use App\Http\Controllers\Tenant\ExportController;
 
 Route::prefix('/salon/{tenant}')->middleware([
@@ -245,6 +246,13 @@ Route::prefix('/salon/{tenant}')->middleware([
         Route::get('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'show'])->name('tenant.diagnosis.show');
         Route::post('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'store'])->name('tenant.diagnosis.store');
         Route::put('agenda/appointments/{appointment}/diagnosis', [AppointmentDiagnosisController::class, 'update'])->name('tenant.diagnosis.update');
+
+        // Warranties
+        Route::get('warranties/check', [WarrantyController::class, 'check'])->name('tenant.warranties.check');
+        Route::get('warranties', [WarrantyController::class, 'index'])->name('tenant.warranties.index');
+        Route::get('warranties/expiring', [WarrantyController::class, 'expiring'])->name('tenant.warranties.expiring');
+        Route::get('warranties/client/{clientId}', [WarrantyController::class, 'clientWarranties'])->name('tenant.warranties.client');
+        Route::post('warranties/{warranty}/void', [WarrantyController::class, 'void'])->name('tenant.warranties.void');
 
         // Exports / Excel
         Route::get('exports/sales', [ExportController::class, 'sales'])->name('tenant.exports.sales');

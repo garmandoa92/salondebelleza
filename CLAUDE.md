@@ -159,7 +159,7 @@ resources/js/
 | 17c | docs/sesion-17c-reportes-excel.md | DONE | Reportes Excel completos | Post MVP |
 | 18 | docs/sesion-18-superadmin.md | PENDING | Panel de superadmin | Post MVP |
 | 19  | docs/sesion-19-fotos.md       | DONE | Módulo de fotos antes/después | Post MVP |
-| 19b | docs/sesion-19b-garantias.md  | Módulo de garantías           | Post MVP |
+| 19b | docs/sesion-19b-garantias.md  | DONE | Módulo de garantías           | Post MVP |
 | 19c | docs/sesion-19c-historial-mejorado.md | DONE | Historial con diagnostico y fotos | Post MVP |
 
 ## Modulos implementados
@@ -184,6 +184,7 @@ resources/js/
 - **Anticipos y Abonos**: ClientAdvance model, registro desde agenda/ficha cliente, aplicacion automatica en checkout, saldo a favor, panel dashboard
 - **Reportes Excel**: maatwebsite/excel, 7 exports (ventas, P&L, citas, clientes, comisiones, inventario, flujo caja) con hojas multiples y estilos
 - **Fotos Antes/Despues**: AppointmentPhoto model, subida con compresion, thumbnails GD, lightbox, tab Fotos en ficha cliente, foto perfil cliente
+- **Garantias**: AppointmentWarranty model, config por servicio (dias + descripcion), creacion auto al completar cita, tab Garantias en ficha cliente, check en modal cita
 
 <!-- MEMORY:START -->
 # salondebelleza

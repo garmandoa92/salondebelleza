@@ -171,6 +171,22 @@ class AppointmentController extends Controller
             $appointment->update(['payment_status' => 'pending']);
         }
 
+        // Create warranty if service has one
+        $appointment->load('service');
+        if ($appointment->service?->has_warranty && $appointment->service?->warranty_days && !$appointment->is_warranty) {
+            $warrantyService = app(\App\Services\WarrantyService::class);
+            $warrantyService->createFromAppointment($appointment);
+        }
+
+        // If this is a warranty visit, mark the warranty as used
+        if ($appointment->is_warranty && $appointment->warranty_id) {
+            $warranty = \App\Models\AppointmentWarranty::find($appointment->warranty_id);
+            if ($warranty) {
+                $warrantyService = app(\App\Services\WarrantyService::class);
+                $warrantyService->useWarranty($warranty, $appointment);
+            }
+        }
+
         if (request()->wantsJson()) {
             return response()->json(['success' => true, 'payment_status' => $appointment->payment_status]);
         }

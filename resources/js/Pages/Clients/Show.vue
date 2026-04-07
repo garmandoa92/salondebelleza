@@ -153,7 +153,23 @@ const refundAdvance = async (id) => {
   loadAdvances()
 }
 
-onMounted(() => { loadPackages(); loadAdvances(); loadClientPhotos() })
+// Warranties
+const warranties = ref([])
+const loadWarranties = async () => {
+  try {
+    const { data } = await axios.get(`${base}/warranties/client/${props.client.id}`)
+    warranties.value = data
+  } catch {}
+}
+
+const voidWarranty = async (id) => {
+  const reason = prompt('Motivo de anulacion:')
+  if (!reason) return
+  await axios.post(`${base}/warranties/${id}/void`, { reason })
+  loadWarranties()
+}
+
+onMounted(() => { loadPackages(); loadAdvances(); loadClientPhotos(); loadWarranties() })
 
 const initials = ((props.client.first_name?.[0] || '') + (props.client.last_name?.[0] || '')).toUpperCase()
 
@@ -187,6 +203,7 @@ const tabItems = [
   { key: 'saldo', label: 'Saldo', count: () => advances.value.length },
   { key: 'paquetes', label: 'Paquetes', count: () => clientPackages.value.length },
   { key: 'fotos', label: 'Fotos', count: () => totalPhotos.value },
+  { key: 'garantias', label: 'Garantias', count: () => warranties.value.length },
   { key: 'futuras', label: 'Futuras', count: () => props.futureAppointments?.length || 0 },
 ]
 </script>
@@ -641,6 +658,48 @@ const tabItems = [
             <p class="text-white/40 text-xs text-center mt-1">{{ typePhotoLabel(lightboxPhoto.type) }}</p>
           </div>
         </div>
+
+        <!-- Tab: Garantias -->
+        <Card v-if="activeTab === 'garantias'">
+          <CardContent class="pt-4">
+            <div v-if="warranties.length" class="space-y-3">
+              <div v-for="w in warranties" :key="w.id"
+                :class="['border rounded-xl p-4 space-y-2', w.status === 'active' ? 'border-green-200 bg-green-50/30' : 'border-gray-100']">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span :class="['w-2.5 h-2.5 rounded-full', w.status === 'active' ? 'bg-green-500' : w.status === 'used' ? 'bg-blue-500' : w.status === 'expired' ? 'bg-gray-400' : 'bg-red-400']" />
+                    <span class="text-sm font-semibold text-gray-900">{{ w.service?.name }}</span>
+                  </div>
+                  <Badge :class="w.status === 'active' ? 'bg-green-100 text-green-700' : w.status === 'used' ? 'bg-blue-100 text-blue-700' : w.status === 'expired' ? 'bg-gray-100 text-gray-500' : 'bg-red-100 text-red-700'" class="text-[10px] font-semibold">
+                    {{ { active: 'ACTIVA', used: 'USADA', expired: 'VENCIDA', void: 'ANULADA' }[w.status] }}
+                  </Badge>
+                </div>
+                <div class="text-xs text-gray-500">
+                  <span>Emitida: {{ new Date(w.issued_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) }}</span>
+                  <span v-if="w.appointment?.stylist"> · Por: {{ w.appointment.stylist.name }}</span>
+                </div>
+                <div v-if="w.status === 'active'" class="space-y-1">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-gray-500">Vence: {{ new Date(w.expires_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) }}</span>
+                    <span class="font-medium text-green-700">{{ Math.max(0, Math.ceil((new Date(w.expires_at) - new Date()) / 86400000)) }} dias restantes</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-green-100">
+                    <div class="h-1.5 rounded-full bg-green-500 transition-all"
+                      :style="{ width: `${Math.max(5, 100 - (Math.ceil((new Date(w.expires_at) - new Date()) / 86400000) / (w.service?.warranty_days || 30) * 100))}%` }" />
+                  </div>
+                </div>
+                <p v-if="w.notes" class="text-xs text-gray-600">{{ w.notes }}</p>
+                <div v-if="w.status === 'active'" class="flex gap-2 pt-1">
+                  <Link :href="`${base}/agenda`"><Button size="sm" class="text-xs">Agendar visita de garantia</Button></Link>
+                  <Button variant="ghost" size="sm" class="text-xs text-red-500" @click="voidWarranty(w.id)">Anular</Button>
+                </div>
+                <p v-if="w.status === 'used'" class="text-xs text-blue-600">Usada el {{ new Date(w.updated_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) }}</p>
+                <p v-if="w.status === 'void'" class="text-xs text-red-500">Motivo: {{ w.voided_reason }}</p>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-400 text-center py-8">Sin garantias registradas</p>
+          </CardContent>
+        </Card>
 
         <!-- Tab: Futuras -->
         <Card v-if="activeTab === 'futuras'">

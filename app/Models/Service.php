@@ -23,6 +23,9 @@ class Service extends Model
         'image_path',
         'is_visible',
         'requires_consultation',
+        'has_warranty',
+        'warranty_days',
+        'warranty_description',
         'sort_order',
     ];
 
@@ -35,6 +38,8 @@ class Service extends Model
             'recipe' => 'array',
             'is_visible' => 'boolean',
             'requires_consultation' => 'boolean',
+            'has_warranty' => 'boolean',
+            'warranty_days' => 'integer',
             'sort_order' => 'integer',
         ];
     }

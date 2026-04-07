@@ -21,6 +21,8 @@ class Appointment extends Model
         'branch_id',
         'client_package_item_id',
         'payment_status',
+        'is_warranty',
+        'warranty_id',
         'sessions_used',
         'starts_at',
         'ends_at',

@@ -30,6 +30,9 @@ const form = useForm({
   is_visible: props.service?.is_visible ?? true,
   requires_consultation: props.service?.requires_consultation ?? false,
   iva_rate: props.service?.iva_rate,
+  has_warranty: props.service?.has_warranty ?? false,
+  warranty_days: props.service?.warranty_days || 30,
+  warranty_description: props.service?.warranty_description || '',
   recipe: props.service?.recipe || [],
   image: null,
 })
@@ -217,6 +220,40 @@ const removeRecipeItem = (index) => {
             </div>
           </div>
           <p v-else class="text-sm text-gray-400">Sin productos en la receta. Los productos se descuentan automaticamente al completar el servicio.</p>
+        </CardContent>
+      </Card>
+
+      <!-- Warranty -->
+      <Card>
+        <CardHeader><CardTitle class="text-base">Garantia del servicio</CardTitle></CardHeader>
+        <CardContent class="space-y-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="form.has_warranty" class="rounded border-gray-300" />
+            <div>
+              <span class="text-sm font-medium">Este servicio incluye garantia</span>
+              <p class="text-xs text-gray-500">Se activa automaticamente al completar la cita</p>
+            </div>
+          </label>
+          <template v-if="form.has_warranty">
+            <div class="space-y-2">
+              <Label>Dias de garantia</Label>
+              <div class="flex items-center gap-2">
+                <Input v-model="form.warranty_days" type="number" min="1" max="365" class="w-24" />
+                <span class="text-sm text-gray-500">dias</span>
+              </div>
+              <div class="flex gap-1.5">
+                <button v-for="d in [7, 15, 30, 60, 90]" :key="d" type="button" @click="form.warranty_days = d"
+                  :class="['text-xs px-2.5 py-1 rounded-full border transition', form.warranty_days == d ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50']">
+                  {{ d }}d
+                </button>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <Label>Que cubre la garantia</Label>
+              <textarea v-model="form.warranty_description" rows="2" class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                placeholder="Ej: Cubre retoques si el color no quedo uniforme" />
+            </div>
+          </template>
         </CardContent>
       </Card>
 
