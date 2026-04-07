@@ -196,6 +196,8 @@ const daysToBirthday = () => {
 }
 
 const openWhatsapp = () => window.open(`https://wa.me/593${props.client.phone?.replace(/^0/, '').replace(/\D/g, '')}`, '_blank')
+const printInvoice = (invoiceId) => window.open(`${base}/print/invoice/${invoiceId}`, '_blank')
+const printSaleReceipt = (saleId) => window.open(`${base}/print/sale/${saleId}`, '_blank')
 
 const tabItems = [
   { key: 'historial', label: 'Historial', count: () => props.pastAppointments?.length || 0 },
@@ -441,8 +443,8 @@ const tabItems = [
 
                     <!-- Actions -->
                     <div class="flex gap-2 pt-2 border-t">
-                      <Button v-if="apt.sale?.sri_invoice_id" variant="ghost" size="sm" class="text-xs" @click="window.open(`${base}/print/invoice/${apt.sale.sri_invoice_id}`, '_blank')">Ver factura</Button>
-                      <Button v-if="apt.sale" variant="ghost" size="sm" class="text-xs" @click="window.open(`${base}/print/sale/${apt.sale.id}`, '_blank')">Reimprimir recibo</Button>
+                      <Button v-if="apt.sale?.sri_invoice_id" variant="ghost" size="sm" class="text-xs" @click="printInvoice(apt.sale.sri_invoice_id)">Ver factura</Button>
+                      <Button v-if="apt.sale" variant="ghost" size="sm" class="text-xs" @click="printSaleReceipt(apt.sale.id)">Reimprimir recibo</Button>
                     </div>
                   </div>
                 </CardContent>
