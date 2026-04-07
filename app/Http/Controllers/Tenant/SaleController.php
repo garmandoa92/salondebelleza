@@ -130,6 +130,7 @@ class SaleController extends Controller
             'payment_methods.*.method' => ['required', 'string'],
             'payment_methods.*.amount' => ['required', 'numeric', 'min:0'],
             'advance_applied' => ['nullable', 'numeric', 'min:0'],
+            'warranty_applied' => ['nullable', 'uuid'],
         ]);
 
         $data['branch_id'] = session('current_branch_id');
@@ -141,6 +142,14 @@ class SaleController extends Controller
             if ($client && (float) $client->balance > 0) {
                 $applyAmount = min((float) $request->advance_applied, (float) $client->balance);
                 (new \App\Services\AdvanceService())->applyBalanceToSale($client, $sale, $applyAmount);
+            }
+        }
+
+        // Apply warranty if requested
+        if ($request->filled('warranty_applied')) {
+            $warranty = \App\Models\AppointmentWarranty::find($request->warranty_applied);
+            if ($warranty && $warranty->status === 'active') {
+                (new \App\Services\WarrantyService())->useWarranty($warranty, $sale->appointment ?? $sale);
             }
         }
 

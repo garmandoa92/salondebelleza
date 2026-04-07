@@ -46,6 +46,10 @@ let searchTimer = null
 const clientBalance = ref(0)
 const applyAdvance = ref(false)
 
+// Warranty
+const activeWarranty = ref(null)
+const applyWarranty = ref(false)
+
 // Invoice
 const invoiceRequired = ref(false)
 const invoiceData = ref({ buyer_identification_type: 'final_consumer', buyer_identification: '', buyer_name: '', buyer_email: '', buyer_phone: '', buyer_address: '', buyer_commercial_name: '', update_client: true })
@@ -55,19 +59,21 @@ const showDiscount = ref(false)
 
 // Computed
 const getItemIva = (item) => item.iva_rate ?? globalIva.value
-const subtotal = computed(() => items.value.reduce((sum, i) => sum + Number(i.subtotal || 0), 0))
+const warrantyItemId = computed(() => activeWarranty.value && applyWarranty.value ? props.preItems?.[0]?.reference_id : null)
+const getItemSubtotal = (item) => warrantyItemId.value && item.reference_id === warrantyItemId.value && item.type === 'service' ? 0 : Number(item.subtotal || 0)
+const subtotal = computed(() => items.value.reduce((sum, i) => sum + getItemSubtotal(i), 0))
 const discountAmount = computed(() => {
   if (!discount.value.enabled) return 0
   if (discount.value.type === 'percentage') return Math.round(subtotal.value * Number(discount.value.amount) / 100 * 100) / 100
   return Number(discount.value.amount)
 })
 const baseImponible = computed(() => Math.max(0, subtotal.value - discountAmount.value))
-const subtotal0 = computed(() => items.value.filter(i => getItemIva(i) === 0).reduce((s, i) => s + Number(i.subtotal || 0), 0))
-const subtotalIva = computed(() => items.value.filter(i => getItemIva(i) > 0).reduce((s, i) => s + Number(i.subtotal || 0), 0))
+const subtotal0 = computed(() => items.value.filter(i => getItemIva(i) === 0).reduce((s, i) => s + getItemSubtotal(i), 0))
+const subtotalIva = computed(() => items.value.filter(i => getItemIva(i) > 0).reduce((s, i) => s + getItemSubtotal(i), 0))
 const hasMixedIva = computed(() => subtotal0.value > 0 && subtotalIva.value > 0)
 const ivaAmount = computed(() => items.value.reduce((sum, i) => {
   const rate = getItemIva(i)
-  return sum + Math.round(Number(i.subtotal || 0) * rate / 100 * 100) / 100
+  return sum + Math.round(getItemSubtotal(i) * rate / 100 * 100) / 100
 }, 0))
 const total = computed(() => Math.round((baseImponible.value + ivaAmount.value) * 100) / 100)
 const advanceApplied = computed(() => applyAdvance.value ? Math.min(clientBalance.value, total.value) : 0)
@@ -192,7 +198,7 @@ const paymentMethods = [
 ]
 
 const submit = async () => {
-  if (paymentDiff.value > 0.01) return
+  if (paymentDiff.value > 0.01 && !(applyWarranty.value && totalAfterAdvance.value === 0)) return
   saving.value = true
   try {
     const { data } = await axios.post(`${base}/ventas`, {
@@ -209,6 +215,7 @@ const submit = async () => {
       tip: tip.value.amount || 0, tip_stylist_id: tip.value.stylist_id || null,
       payment_methods: payments.value.map(p => ({ method: p.method, amount: Number(p.amount) })),
       advance_applied: advanceApplied.value,
+      warranty_applied: applyWarranty.value && activeWarranty.value ? activeWarranty.value.id : null,
     })
 
     if (invoiceRequired.value && invoiceData.value.buyer_identification_type !== 'final_consumer') {
@@ -223,12 +230,21 @@ const initials = (name) => name?.split(' ').map(n => n?.[0]).filter(Boolean).joi
 const typeBadge = (t) => ({ service: 'bg-blue-100 text-blue-700', product: 'bg-emerald-100 text-emerald-700', package: 'bg-purple-100 text-purple-700' }[t] || 'bg-gray-100')
 const typeLabel = (t) => ({ service: 'Servicio', product: 'Producto', package: 'Paquete' }[t] || t)
 
-// Load balance if pre-client
+// Load balance + check warranty if pre-client
 onMounted(() => {
   if (selectedClientId.value) {
     axios.get(`${base}/advances/client/${selectedClientId.value}`).then(({ data }) => {
       clientBalance.value = Number(data.balance) || 0
     }).catch(() => {})
+
+    // Check warranty for pre-loaded service
+    if (props.preItems?.[0]?.reference_id) {
+      axios.get(`${base}/warranties/check`, {
+        params: { client_id: selectedClientId.value, service_id: props.preItems[0].reference_id }
+      }).then(({ data }) => {
+        if (data.has_warranty) activeWarranty.value = data.warranty
+      }).catch(() => {})
+    }
   }
 })
 </script>
@@ -295,6 +311,25 @@ onMounted(() => {
             <input type="checkbox" v-model="applyAdvance" class="rounded border-green-300" />
             <span class="text-sm text-green-800">Aplicar</span>
           </label>
+        </div>
+
+        <!-- Warranty banner -->
+        <div v-if="activeWarranty" class="rounded-xl p-4" style="background: #FFF8E1; border: 0.5px solid #F9A825; border-left: 3px solid #F9A825;">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-semibold text-amber-800">Este cliente tiene garantia activa</p>
+              <p class="text-xs text-amber-700 mt-0.5">
+                {{ activeWarranty.service?.name }} · vence {{ new Date(activeWarranty.expires_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' }) }}
+                ({{ Math.max(0, Math.ceil((new Date(activeWarranty.expires_at) - new Date()) / 86400000)) }} dias)
+              </p>
+              <p v-if="activeWarranty.notes" class="text-xs text-amber-600 mt-1">{{ activeWarranty.notes }}</p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer shrink-0">
+              <input type="checkbox" v-model="applyWarranty" class="rounded border-amber-400" />
+              <span class="text-sm font-medium text-amber-800">Aplicar</span>
+            </label>
+          </div>
+          <p v-if="applyWarranty" class="text-xs text-amber-700 mt-2 font-medium">El servicio de garantia se cobra a $0.00</p>
         </div>
 
         <!-- 2. INVOICE -->
@@ -378,7 +413,13 @@ onMounted(() => {
                   </td>
                   <td class="py-3"><Input v-model="item.quantity" type="number" min="0.01" step="1" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
                   <td class="py-3"><Input v-model="item.unit_price" type="number" step="0.01" class="h-8 text-xs text-center" @input="updateItemSubtotal(item)" /></td>
-                  <td class="py-3 text-right font-semibold">${{ Number(item.subtotal).toFixed(2) }}</td>
+                  <td class="py-3 text-right font-semibold">
+                    <template v-if="warrantyItemId && item.reference_id === warrantyItemId && item.type === 'service'">
+                      <span class="line-through text-gray-400 text-xs mr-1">${{ Number(item.subtotal).toFixed(2) }}</span>
+                      <span class="text-green-600">$0.00</span>
+                    </template>
+                    <template v-else>${{ Number(item.subtotal).toFixed(2) }}</template>
+                  </td>
                   <td class="py-3"><button @click="removeItem(i)" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
                 </tr>
               </tbody>
@@ -486,10 +527,10 @@ onMounted(() => {
           </div>
 
           <!-- Submit -->
-          <button @click="submit" :disabled="saving || !items.length || paymentDiff > 0.01"
+          <button @click="submit" :disabled="saving || !items.length || (paymentDiff > 0.01 && totalWithTip > 0)"
             :class="['w-full py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm',
-              saving || !items.length || paymentDiff > 0.01 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98] shadow-md']">
-            {{ saving ? 'Procesando...' : `Completar cobro · $${totalWithTip.toFixed(2)}` }}
+              saving || !items.length || (paymentDiff > 0.01 && totalWithTip > 0) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98] shadow-md']">
+            {{ saving ? 'Procesando...' : totalWithTip === 0 ? 'Registrar (garantia $0.00)' : `Completar cobro · $${totalWithTip.toFixed(2)}` }}
           </button>
 
           <p v-if="paymentDiff > 0.01" class="text-xs text-red-500 text-center">Falta asignar ${{ paymentDiff.toFixed(2) }}</p>
