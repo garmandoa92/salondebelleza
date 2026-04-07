@@ -17,6 +17,7 @@ class UpdateServiceRequest extends FormRequest
             'service_category_id' => ['required', 'uuid', 'exists:service_categories,id'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'service_type' => ['nullable', 'string', 'in:hair,spa,facial,nails,brows,other'],
             'base_price' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
             'preparation_minutes' => ['nullable', 'integer', 'min:0', 'max:60'],

@@ -163,10 +163,12 @@ resources/js/
 | 19  | docs/sesion-19-fotos.md       | DONE | Módulo de fotos antes/después | Post MVP |
 | 19b | docs/sesion-19b-garantias.md  | DONE | Módulo de garantías           | Post MVP |
 | 19c | docs/sesion-19c-historial-mejorado.md | DONE | Historial con diagnostico y fotos | Post MVP |
+| 19d | sesion-19d-nota-unificada.md | Nota de visita unificada por tipo | 🔴 |
 | 20 | docs/sesion-20-gastos-ecuador.md | DONE | Módulo gastos y P&L Ecuador | Post MVP |
 | 20b | docs/sesion-20b-autocomplete-sri.md | DONE | Autocomplete SRI clave de acceso | Post MVP |
 | 24  | docs/sesion-24-ficha-salud.md | DONE | Ficha de salud del cliente | Post MVP |
 | 24b | docs/sesion-24b-nota-sesion.md | DONE | Nota de sesion con mapa corporal | Post MVP |
+| 19d | docs/sesion-19d-nota-unificada.md | DONE | Nota de visita unificada con tipos de servicio | Post MVP |
 
 ## Modulos implementados
 - **Auth**: registro salon, login central -> redirect a tenant, login tenant con token cross-domain
@@ -194,6 +196,7 @@ resources/js/
 - **Gastos y P&L**: ExpenseCategory + Expense models, CRUD gastos con categorias personalizables, factura SRI proveedor, retencion en la fuente, gastos recurrentes (job mensual), P&L mensual con IVA real desde SaleItems, export Excel 3 hojas, widget P&L en Dashboard, autocomplete SRI desde clave de acceso 49 dígitos (decodificación local + consulta SOAP + cache 24h)
 - **Ficha de Salud**: ClientHealthProfile con alergias (tags), condiciones medicas, medicamentos, contraindicaciones, mapa corporal SVG interactivo (frontal+dorsal) con zonas clickeables y notas, slider presion 1-5, preferencias personales, notas terapeuta, alerta pre-cita obligatoria con confirmacion registrada, badge ficha desactualizada (+6 meses), job WhatsApp recordatorio semanal
 - **Nota de Sesion**: AppointmentSessionNote con mapa corporal 3 estados (trabajado/tension/evitado), zonas heredadas de ficha salud (rojo punteado, no editables), tecnicas aplicadas (15 predefinidas + custom), productos usados, duracion real, nivel tension, observaciones privadas, recomendacion proxima sesion, recomendacion cliente con WhatsApp automatico, pagina completa /citas/{id} con layout 2 columnas (ficha salud colapsable + nota sesion | detalle cita + acciones + historial reciente), componentes reutilizables (BodyMapSVG, SessionNoteForm), drawer refactorizado
+- **Nota Unificada**: UnifiedNoteForm que fusiona diagnostico (19c) y nota sesion (24b) adaptandose por tipo de servicio (hair/spa/facial/nails/brows/other), ServiceTypeFields config campos por tipo, TECHNIQUES_BY_TYPE tecnicas predefinidas por tipo, service_type en servicios con seeder automatico, selector visual de tipo en formulario servicios, UnifiedNoteController con guardado dual (diagnosis vs session_note)
 
 <!-- MEMORY:START -->
 # salondebelleza

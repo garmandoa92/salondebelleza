@@ -15,6 +15,7 @@ class Service extends Model
         'service_category_id',
         'name',
         'description',
+        'service_type',
         'base_price',
         'iva_rate',
         'duration_minutes',
@@ -53,6 +54,23 @@ class Service extends Model
     {
         return $this->belongsToMany(Stylist::class, 'service_stylist')
             ->withPivot('custom_price');
+    }
+
+    public function getServiceTypeLabel(): string
+    {
+        return match ($this->service_type) {
+            'hair' => 'Cabello',
+            'spa' => 'Spa / Masajes',
+            'facial' => 'Facial',
+            'nails' => 'Uñas',
+            'brows' => 'Cejas y Pestañas',
+            default => 'General',
+        };
+    }
+
+    public function needsBodyMap(): bool
+    {
+        return in_array($this->service_type, ['spa', 'facial']);
     }
 
     public function saleItems()

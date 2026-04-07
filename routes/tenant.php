@@ -36,6 +36,7 @@ use App\Http\Controllers\Tenant\ExpenseCategoryController;
 use App\Http\Controllers\Tenant\ClientHealthProfileController;
 use App\Http\Controllers\Tenant\SessionNoteController;
 use App\Http\Controllers\Tenant\AppointmentDetailController;
+use App\Http\Controllers\Tenant\UnifiedNoteController;
 
 Route::prefix('/salon/{tenant}')->middleware([
     'web',
@@ -269,6 +270,7 @@ Route::prefix('/salon/{tenant}')->middleware([
         // Session Notes
         Route::get('citas/{appointment}/nota-sesion', [SessionNoteController::class, 'show'])->name('tenant.session-note.show');
         Route::post('citas/{appointment}/nota-sesion', [SessionNoteController::class, 'save'])->name('tenant.session-note.save');
+        Route::post('citas/{appointment}/nota-unificada', [UnifiedNoteController::class, 'save'])->name('tenant.unified-note.save');
 
         // Gastos / Expenses (specific routes BEFORE parameterized ones)
         Route::get('gastos/api/pl', [ExpenseController::class, 'pl'])->name('tenant.expenses.pl');

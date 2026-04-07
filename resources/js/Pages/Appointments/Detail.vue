@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { Head, Link, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import AppointmentHealthAlert from '@/Components/AppointmentHealthAlert.vue'
-import SessionNoteForm from '@/Components/SessionNoteForm.vue'
+import UnifiedNoteForm from '@/Components/UnifiedNoteForm.vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -17,6 +17,10 @@ const props = defineProps({
   sessionNote: Object,
   recentHistory: Array,
   constants: Object,
+  serviceType: { type: String, default: 'other' },
+  fields: Object,
+  techniques: Array,
+  unifiedNote: Object,
 })
 
 const page = usePage()
@@ -130,11 +134,13 @@ function goBack() {
             <span v-else class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-500">En curso</span>
           </div>
           <div class="p-5">
-            <SessionNoteForm
+            <UnifiedNoteForm
               :appointment="apt"
-              :session-note="sessionNote"
+              :service-type="serviceType"
+              :fields="fields"
+              :techniques="techniques"
+              :unified-note="unifiedNote"
               :inherited-avoid-zones="sessionNote?.inherited_avoid_zones || []"
-              :techniques="constants?.techniques || []"
               @saved="onNoteSaved"
             />
           </div>

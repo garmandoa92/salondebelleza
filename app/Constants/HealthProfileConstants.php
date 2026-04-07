@@ -64,6 +64,44 @@ class HealthProfileConstants
         'Shiatsu',
     ];
 
+    const TECHNIQUES_BY_TYPE = [
+        'hair' => [
+            'Corte recto', 'Degradado', 'Navaja', 'Tijera',
+            'Balayage', 'Mechas', 'Tinte completo', 'Raiz',
+            'Alisado', 'Keratina', 'Hidratacion profunda',
+            'Permanente', 'Brushing', 'Babylights',
+        ],
+        'spa' => [
+            'Effleurage', 'Petrissage', 'Friccion', 'Tapotement',
+            'Vibracion', 'Puntos gatillo', 'Drenaje linfatico',
+            'Piedras calientes', 'Bambuterapia', 'Reflexologia',
+            'Aromaterapia', 'Ventosas', 'Shiatsu', 'Tailandes',
+            'Masaje con velas',
+        ],
+        'facial' => [
+            'Limpieza profunda', 'Exfoliacion', 'Extraccion',
+            'Hidratacion', 'Peeling quimico', 'Microdermoabrasion',
+            'Radiofrecuencia', 'Ultrasonido', 'Oxigenoterapia',
+            'Mesoterapia', 'Plasma', 'LED terapia',
+        ],
+        'nails' => [
+            'Manicure clasica', 'Manicure semipermanente',
+            'Manicure gel', 'Pedicure clasico', 'Pedicure spa',
+            'Pedicure semipermanente', 'Nail art', 'Acrilico',
+            'Relleno', 'Retiro de gel',
+        ],
+        'brows' => [
+            'Diseno con hilo', 'Diseno con pinza', 'Diseno con cera',
+            'Henna de cejas', 'Laminado de cejas', 'Microblading',
+            'Lifting de pestanas', 'Extensiones pelo a pelo',
+            'Extensiones volumen', 'Tinte de pestanas',
+        ],
+        'other' => [
+            'Tecnica manual', 'Tecnica con aparatologia',
+            'Tratamiento especializado',
+        ],
+    ];
+
     const BODY_ZONES_FRONT = [
         ['id' => 'cabeza', 'label' => 'Cabeza'],
         ['id' => 'cuello', 'label' => 'Cuello'],

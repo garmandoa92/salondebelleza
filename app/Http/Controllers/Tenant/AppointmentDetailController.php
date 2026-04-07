@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Constants\HealthProfileConstants;
+use App\Constants\ServiceTypeFields;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Services\ClientHealthProfileService;
@@ -21,17 +22,16 @@ class AppointmentDetailController extends Controller
         $appointment->load([
             'client.healthProfile',
             'sessionNote',
+            'diagnosis',
             'healthConfirmations',
             'stylist:id,name,color',
-            'service:id,name,base_price,duration_minutes',
-            'branch:id,name',
+            'service',
         ]);
 
-        // Recent history: last 3 completed appointments of same client
         $recentHistory = Appointment::where('client_id', $appointment->client_id)
             ->where('id', '!=', $appointment->id)
             ->where('status', 'completed')
-            ->with(['sessionNote', 'service:id,name'])
+            ->with(['sessionNote', 'diagnosis', 'service:id,name,service_type'])
             ->orderBy('starts_at', 'desc')
             ->limit(3)
             ->get();
@@ -40,6 +40,17 @@ class AppointmentDetailController extends Controller
         $noteData = $this->noteService->getForAppointment($appointment);
         $isConfirmed = $this->healthService->isConfirmed($appointment);
         $confirmations = $this->healthService->getConfirmations($appointment);
+
+        // Unified note system: detect service type and load correct data
+        $serviceType = $appointment->service?->service_type ?? 'other';
+        $fields = ServiceTypeFields::forType($serviceType);
+        $techniques = HealthProfileConstants::TECHNIQUES_BY_TYPE[$serviceType]
+            ?? HealthProfileConstants::TECHNIQUES_BY_TYPE['other'];
+
+        // Load unified note based on service type
+        $unifiedNote = $fields['body_map']
+            ? $appointment->sessionNote
+            : $appointment->diagnosis;
 
         return Inertia::render('Appointments/Detail', [
             'appointment' => $appointment,
@@ -50,9 +61,10 @@ class AppointmentDetailController extends Controller
             'confirmations' => $confirmations,
             'sessionNote' => $noteData,
             'recentHistory' => $recentHistory,
-            'constants' => [
-                'techniques' => HealthProfileConstants::TECHNIQUES,
-            ],
+            'serviceType' => $serviceType,
+            'fields' => $fields,
+            'techniques' => $techniques,
+            'unifiedNote' => $unifiedNote,
         ]);
     }
 }

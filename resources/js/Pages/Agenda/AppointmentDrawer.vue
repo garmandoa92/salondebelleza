@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import axios from 'axios'
-import AppointmentHealthAlert from '@/Components/AppointmentHealthAlert.vue'
 import SessionNoteDrawer from '@/Components/SessionNoteDrawer.vue'
 
 const props = defineProps({
@@ -39,6 +38,7 @@ watch(() => props.appointmentId, async (id) => {
   try {
     const { data } = await axios.get(`${base}/agenda/appointments/${id}`)
     apt.value = data
+    loadHealthAlert(id)
   } finally { loading.value = false }
 })
 
@@ -58,6 +58,37 @@ const openCheckout = () => {
 // Advance modal
 const showAdvanceModal = ref(false)
 const showSessionNote = ref(false)
+
+// Health alert collapsible
+const healthData = ref(null)
+const healthOpen = ref(false)
+const healthConfirmed = ref(false)
+
+const loadHealthAlert = async (id) => {
+  try {
+    const { data } = await axios.get(`${base}/citas/${id}/alerta-salud`)
+    healthData.value = data
+    healthConfirmed.value = data.is_confirmed
+    healthOpen.value = !data.is_confirmed && data.has_alerts
+  } catch (e) {
+    healthData.value = null
+  }
+}
+
+const confirmHealth = async () => {
+  if (!apt.value) return
+  try {
+    await axios.post(`${base}/citas/${apt.value.id}/confirmar-ficha`)
+    healthConfirmed.value = true
+    healthOpen.value = false
+    if (healthData.value) healthData.value.is_confirmed = true
+  } catch (e) { console.error(e) }
+}
+
+const cleanInternalNotes = computed(() => {
+  if (!apt.value?.internal_notes) return ''
+  return apt.value.internal_notes.replace(/Token:\s*\S+/gi, '').trim()
+})
 const advanceForm = ref({ amount: '', payment_method: 'cash', reference: '', notes: '' })
 const savingAdvance = ref(false)
 
@@ -259,8 +290,65 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             </div>
           </div>
 
-          <!-- Health Alert -->
-          <AppointmentHealthAlert :appointmentId="apt.id" />
+          <!-- Health Alert (collapsible) -->
+          <div v-if="healthData?.has_alerts" class="rounded-xl border-2 overflow-hidden"
+            :class="healthConfirmed ? 'border-gray-200' : 'border-red-200 bg-red-50/50'">
+            <!-- Clickable header -->
+            <div class="flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-gray-50/50"
+              :class="healthConfirmed ? 'bg-gray-50' : 'bg-red-100/60'"
+              @click="healthOpen = !healthOpen">
+              <svg class="w-4 h-4 flex-shrink-0" :class="healthConfirmed ? 'text-green-600' : 'text-red-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span class="text-sm font-medium" :class="healthConfirmed ? 'text-gray-700' : 'text-red-800'">Ficha de salud</span>
+              <span v-if="healthData.alert_summary?.allergies?.length" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-red-100 text-red-700">{{ healthData.alert_summary.allergies.length }} alergias</span>
+              <span v-if="healthData.alert_summary?.avoid_zones?.length" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">{{ healthData.alert_summary.avoid_zones.length }} zonas</span>
+              <div class="ml-auto flex items-center gap-2">
+                <span v-if="healthConfirmed" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-100 text-green-700">Confirmada</span>
+                <span v-else class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-red-100 text-red-700">Pendiente</span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="healthOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+            <!-- Collapsible content -->
+            <div v-show="healthOpen" class="border-t px-4 py-3 space-y-3" :class="healthConfirmed ? 'border-gray-200' : 'border-red-200'">
+              <div v-if="healthData.alert_summary?.allergies?.length">
+                <p class="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-1">Alergias</p>
+                <div class="flex flex-wrap gap-1">
+                  <span v-for="a in healthData.alert_summary.allergies" :key="a" class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">{{ a }}</span>
+                </div>
+              </div>
+              <div v-if="healthData.alert_summary?.medical_conditions?.length">
+                <p class="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-1">Condiciones medicas</p>
+                <div class="flex flex-wrap gap-1">
+                  <span v-for="c in healthData.alert_summary.medical_conditions" :key="c" class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">{{ c }}</span>
+                </div>
+              </div>
+              <div v-if="healthData.alert_summary?.avoid_zones?.length">
+                <p class="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-1">Zonas a evitar</p>
+                <div v-for="zone in healthData.alert_summary.avoid_zones" :key="zone.zone_id" class="flex items-start gap-2">
+                  <span class="w-2 h-2 rounded-full bg-red-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <span class="text-xs font-medium text-gray-800">{{ zone.label }}</span>
+                    <span v-if="zone.note" class="text-xs text-gray-500 ml-1">— {{ zone.note }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="healthData.alert_summary?.contraindications" class="text-xs text-gray-700">
+                <p class="text-[10px] font-semibold text-red-700 uppercase tracking-wide mb-1">Contraindicaciones</p>
+                {{ healthData.alert_summary.contraindications }}
+              </div>
+              <div class="flex flex-wrap gap-1">
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">Presion: {{ healthData.alert_summary?.pressure_label }}</span>
+                <span v-for="p in healthData.alert_summary?.personal_preferences" :key="p" class="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">{{ p }}</span>
+              </div>
+              <!-- Confirm button -->
+              <div v-if="!healthConfirmed" class="pt-2 border-t border-red-200">
+                <button @click="confirmHealth" class="w-full py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  Confirmar lectura de ficha
+                </button>
+              </div>
+            </div>
+          </div>
 
           <!-- Date/Time -->
           <div class="text-sm text-gray-600">
@@ -299,9 +387,9 @@ const typeLabel = (t) => ({ before: 'ANTES', after: 'DESPUES', reference: 'REF',
             <p class="text-gray-500 text-xs mb-1">Notas</p>
             <p class="text-gray-700">{{ apt.notes }}</p>
           </div>
-          <div v-if="apt.internal_notes" class="text-sm">
+          <div v-if="cleanInternalNotes" class="text-sm">
             <p class="text-gray-500 text-xs mb-1">Notas internas</p>
-            <p class="text-gray-700">{{ apt.internal_notes }}</p>
+            <p class="text-gray-700">{{ cleanInternalNotes }}</p>
           </div>
 
           <!-- Cancellation info -->

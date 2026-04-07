@@ -24,6 +24,7 @@ const form = useForm({
   service_category_id: props.service?.service_category_id || '',
   name: props.service?.name || '',
   description: props.service?.description || '',
+  service_type: props.service?.service_type || 'other',
   base_price: props.service?.base_price || '',
   duration_minutes: props.service?.duration_minutes || 30,
   preparation_minutes: props.service?.preparation_minutes || 0,
@@ -123,6 +124,27 @@ const removeRecipeItem = (index) => {
               class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
               rows="3"
             />
+          </div>
+
+          <div class="space-y-2">
+            <Label>Tipo de servicio</Label>
+            <div class="grid grid-cols-3 gap-2">
+              <button v-for="st in [
+                { value: 'hair', label: 'Cabello', icon: '✂️' },
+                { value: 'spa', label: 'Spa / Masajes', icon: '💆' },
+                { value: 'facial', label: 'Facial', icon: '✨' },
+                { value: 'nails', label: 'Uñas', icon: '💅' },
+                { value: 'brows', label: 'Cejas y Pestañas', icon: '👁️' },
+                { value: 'other', label: 'General', icon: '🔹' },
+              ]" :key="st.value" type="button" @click="form.service_type = st.value"
+                class="flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs transition-all"
+                :class="form.service_type === st.value
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-5)] text-[var(--color-primary)] font-medium'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300'">
+                <span style="font-size:18px">{{ st.icon }}</span>
+                {{ st.label }}
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
