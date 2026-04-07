@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -170,6 +170,52 @@ const createQuickClient = async () => {
 }
 const clearClient = () => { selectedClientId.value = null; selectedClientName.value = null; selectedClientPhone.value = null }
 const skipClient = () => { selectedClientId.value = null; selectedClientName.value = 'Sin cliente'; selectedClientPhone.value = null }
+
+// Searchable dropdowns
+const openDropdown = ref(null) // 'service' | 'product' | 'package' | null
+const dropdownSearch = ref('')
+const dropdownRef = ref(null)
+
+const toggleDropdown = (type) => {
+  if (openDropdown.value === type) { openDropdown.value = null; return }
+  openDropdown.value = type
+  dropdownSearch.value = ''
+  nextTick(() => { document.querySelector('.dropdown-search-input')?.focus() })
+}
+
+const closeDropdown = () => { openDropdown.value = null; dropdownSearch.value = '' }
+
+const filteredServices = computed(() => {
+  const q = dropdownSearch.value.toLowerCase().trim()
+  if (!q) return props.services
+  return props.services.filter(s => s.name.toLowerCase().includes(q))
+})
+
+const filteredProducts = computed(() => {
+  const q = dropdownSearch.value.toLowerCase().trim()
+  if (!q) return props.products
+  return props.products.filter(p => p.name.toLowerCase().includes(q))
+})
+
+const filteredPackages = computed(() => {
+  const q = dropdownSearch.value.toLowerCase().trim()
+  if (!q) return props.packages
+  return props.packages.filter(p => p.name.toLowerCase().includes(q))
+})
+
+// Close on click outside
+const onClickOutside = (e) => {
+  if (openDropdown.value && !e.target.closest('.item-dropdown')) closeDropdown()
+}
+onMounted(() => document.addEventListener('click', onClickOutside))
+
+// Close on ESC
+const onEsc = (e) => { if (e.key === 'Escape') closeDropdown() }
+onMounted(() => document.addEventListener('keydown', onEsc))
+
+const selectService = (s) => { addItem('service', s); closeDropdown() }
+const selectProduct = (p) => { addItem('product', p); closeDropdown() }
+const selectPackage = (pk) => { addPackage(pk); closeDropdown() }
 
 const addItem = (type, item) => {
   items.value.push({
@@ -381,18 +427,48 @@ onMounted(() => {
           <div class="px-5 pt-5 pb-3 border-b flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-900">Servicios y productos</h3>
             <div class="flex gap-1.5 flex-wrap">
-              <select class="text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-2.5 py-1.5 cursor-pointer" @change="e => { const s = services.find(x => x.id === e.target.value); if(s) addItem('service', s); e.target.value='' }">
-                <option value="">+ Servicio</option>
-                <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }} - ${{ Number(s.base_price).toFixed(2) }}</option>
-              </select>
-              <select class="text-xs font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg px-2.5 py-1.5 cursor-pointer" @change="e => { const p = products.find(x => x.id === e.target.value); if(p) addItem('product', p); e.target.value='' }">
-                <option value="">+ Producto</option>
-                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - ${{ Number(p.sale_price).toFixed(2) }}</option>
-              </select>
-              <select v-if="packages.length" class="text-xs font-medium border border-purple-200 bg-purple-50 text-purple-700 rounded-lg px-2.5 py-1.5 cursor-pointer" @change="e => { const pk = packages.find(x => x.id === e.target.value); if(pk) addPackage(pk); e.target.value='' }">
-                <option value="">+ Paquete</option>
-                <option v-for="pk in packages" :key="pk.id" :value="pk.id">{{ pk.name }} - ${{ Number(pk.price).toFixed(2) }}</option>
-              </select>
+              <!-- Service dropdown -->
+              <div class="relative item-dropdown">
+                <button @click.stop="toggleDropdown('service')" class="text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-blue-100 transition">+ Servicio</button>
+                <div v-if="openDropdown === 'service'" class="absolute right-0 top-full mt-1 w-80 bg-white rounded-xl shadow-xl border z-20">
+                  <div class="p-2 border-b"><input v-model="dropdownSearch" class="dropdown-search-input w-full text-sm border rounded-lg px-3 py-2 bg-gray-50" placeholder="Buscar servicio..." /></div>
+                  <div class="max-h-[220px] overflow-y-auto">
+                    <button v-for="s in filteredServices" :key="s.id" @click="selectService(s)" class="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition flex justify-between items-center border-b border-gray-50 last:border-0">
+                      <div class="min-w-0"><p class="text-sm font-medium text-gray-900 truncate">{{ s.name }}</p><p class="text-[11px] text-gray-500">{{ s.duration_minutes }}min</p></div>
+                      <span class="text-sm font-semibold text-gray-900 shrink-0">${{ Number(s.base_price).toFixed(2) }}</span>
+                    </button>
+                    <p v-if="!filteredServices.length" class="text-xs text-gray-400 text-center py-4">Sin resultados para "{{ dropdownSearch }}"</p>
+                  </div>
+                </div>
+              </div>
+              <!-- Product dropdown -->
+              <div class="relative item-dropdown">
+                <button @click.stop="toggleDropdown('product')" class="text-xs font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-emerald-100 transition">+ Producto</button>
+                <div v-if="openDropdown === 'product'" class="absolute right-0 top-full mt-1 w-72 bg-white rounded-xl shadow-xl border z-20">
+                  <div class="p-2 border-b"><input v-model="dropdownSearch" class="dropdown-search-input w-full text-sm border rounded-lg px-3 py-2 bg-gray-50" placeholder="Buscar producto..." /></div>
+                  <div class="max-h-[220px] overflow-y-auto">
+                    <button v-for="p in filteredProducts" :key="p.id" @click="selectProduct(p)" class="w-full text-left px-3 py-2.5 hover:bg-emerald-50 transition flex justify-between items-center border-b border-gray-50 last:border-0">
+                      <div class="min-w-0"><p class="text-sm font-medium text-gray-900 truncate">{{ p.name }}</p><p class="text-[11px] text-gray-500">Stock: {{ p.stock }}</p></div>
+                      <span class="text-sm font-semibold text-gray-900 shrink-0">${{ Number(p.sale_price).toFixed(2) }}</span>
+                    </button>
+                    <p v-if="!filteredProducts.length" class="text-xs text-gray-400 text-center py-4">Sin resultados para "{{ dropdownSearch }}"</p>
+                  </div>
+                </div>
+              </div>
+              <!-- Package dropdown -->
+              <div v-if="packages.length" class="relative item-dropdown">
+                <button @click.stop="toggleDropdown('package')" class="text-xs font-medium border border-purple-200 bg-purple-50 text-purple-700 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-purple-100 transition">+ Paquete</button>
+                <div v-if="openDropdown === 'package'" class="absolute right-0 top-full mt-1 w-72 bg-white rounded-xl shadow-xl border z-20">
+                  <div class="p-2 border-b"><input v-model="dropdownSearch" class="dropdown-search-input w-full text-sm border rounded-lg px-3 py-2 bg-gray-50" placeholder="Buscar paquete..." /></div>
+                  <div class="max-h-[220px] overflow-y-auto">
+                    <button v-for="pk in filteredPackages" :key="pk.id" @click="selectPackage(pk)" class="w-full text-left px-3 py-2.5 hover:bg-purple-50 transition flex justify-between items-center border-b border-gray-50 last:border-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ pk.name }}</p>
+                      <span class="text-sm font-semibold text-gray-900 shrink-0">${{ Number(pk.price).toFixed(2) }}</span>
+                    </button>
+                    <p v-if="!filteredPackages.length" class="text-xs text-gray-400 text-center py-4">Sin resultados para "{{ dropdownSearch }}"</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="p-5">
